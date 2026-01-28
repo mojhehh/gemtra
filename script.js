@@ -660,7 +660,7 @@ const GAMES = {
     },
     'merge-duel-io': {
         name: 'MergeDuel.io',
-        url: 'https://st.8games.net/12/8g/igra-mergeduel-io',
+        url: 'https://st.8games.net/12/8g/igra-mergeduel-io/',
         description: 'Multiplayer merge battling IO game!',
         touchscreen: true,
         image: 'https://static.8games.net/flash/all/1/igra-mergeduel-io.jpg',

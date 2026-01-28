@@ -1844,6 +1844,16 @@ const GAMES = {
         category: 'sports',
         plays: 112000
     },
+    'a-small-world-cup': {
+        name: 'A Small World Cup',
+        url: './a-small-world-cup/index.html',
+        description: 'Fun physics-based soccer game! Use ragdoll physics to score goals in this addictive World Cup game.',
+        touchscreen: true,
+        image: './a-small-world-cup/icon-256.png',
+        category: 'sports',
+        featured: true,
+        plays: 95000
+    },
     'poly-track': {
         name: 'Poly Track',
         url: 'https://polytrack-online.github.io/file/',

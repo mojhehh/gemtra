@@ -658,15 +658,6 @@ const GAMES = {
         category: 'arcade',
         plays: 38000
     },
-    'merge-duel-io': {
-        name: 'MergeDuel.io',
-        url: 'https://st.8games.net/12/8g/igra-mergeduel-io/',
-        description: 'Multiplayer merge battling IO game!',
-        touchscreen: true,
-        image: 'https://static.8games.net/flash/all/1/igra-mergeduel-io.jpg',
-        category: 'multiplayer',
-        plays: 48000
-    },
     'snowballs-battle': {
         name: 'Snowballs: Blue vs Red',
         url: 'https://st.8games.net/7/8g/igra-snezhki-sinie-protiv-krasnykh/',

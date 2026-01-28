@@ -41,8 +41,8 @@
     --shadow-xl: 0 20px 50px rgba(0, 0, 0, 0.6);
     --shadow-glow: 0 0 40px rgba(99, 102, 241, 0.3);
     
-    /* Spacing */
-    --container-max: 1400px;
+    /* Spacing - use min() to never exceed viewport */
+    --container-max: min(1400px, 100vw - 48px);
     --header-height: 70px;
     
     /* iOS Safe Areas */
@@ -93,12 +93,16 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    max-width: 100%;
 }
 
 html {
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
 }
 
 body {
@@ -108,6 +112,8 @@ body {
     line-height: 1.6;
     overflow-x: hidden;
     min-height: 100vh;
+    width: 100%;
+    max-width: 100vw;
 }
 
 /* Custom Scrollbar */
@@ -139,8 +145,11 @@ body {
 /* Container */
 .container {
     max-width: var(--container-max);
+    width: 100%;
     margin: 0 auto;
     padding: 0 24px;
+    box-sizing: border-box;
+    overflow-x: hidden;
 }
 
 /* ============================================
@@ -332,21 +341,22 @@ main,
     justify-content: center;
     z-index: 1;
     animation: loadingFadeIn 0.4s ease-out;
+    transform: scale(1.1);
 }
 
 @keyframes loadingFadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(20px) scale(1.1); }
+    to { opacity: 1; transform: translateY(0) scale(1.1); }
 }
 
 .loader {
-    perspective: 200px;
-    margin-bottom: 32px;
+    perspective: 400px;
+    margin-bottom: 50px;
 }
 
 .loader-cube {
-    width: 70px;
-    height: 70px;
+    width: 120px;
+    height: 120px;
     position: relative;
     transform-style: preserve-3d;
     animation: rotateCube 3.5s infinite ease-in-out;
@@ -354,20 +364,20 @@ main,
 
 .cube-face {
     position: absolute;
-    width: 70px;
-    height: 70px;
+    width: 120px;
+    height: 120px;
     background: var(--gradient-primary);
     border: 2px solid rgba(255, 255, 255, 0.2);
     border-radius: var(--radius-sm);
-    box-shadow: 0 0 30px rgba(99, 102, 241, 0.4);
+    box-shadow: 0 0 40px rgba(99, 102, 241, 0.5);
 }
 
-.cube-face.front { transform: translateZ(35px); }
-.cube-face.back { transform: rotateY(180deg) translateZ(35px); }
-.cube-face.right { transform: rotateY(90deg) translateZ(35px); }
-.cube-face.left { transform: rotateY(-90deg) translateZ(35px); }
-.cube-face.top { transform: rotateX(90deg) translateZ(35px); }
-.cube-face.bottom { transform: rotateX(-90deg) translateZ(35px); }
+.cube-face.front { transform: translateZ(60px); }
+.cube-face.back { transform: rotateY(180deg) translateZ(60px); }
+.cube-face.right { transform: rotateY(90deg) translateZ(60px); }
+.cube-face.left { transform: rotateY(-90deg) translateZ(60px); }
+.cube-face.top { transform: rotateX(90deg) translateZ(60px); }
+.cube-face.bottom { transform: rotateX(-90deg) translateZ(60px); }
 
 @keyframes rotateCube {
     0% { transform: rotateX(0deg) rotateY(0deg); }
@@ -379,8 +389,8 @@ main,
 .loader-brand {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
+    gap: 14px;
+    margin-bottom: 20px;
 }
 
 .loader-logo {
@@ -391,10 +401,10 @@ main,
 }
 
 .loader-logo svg {
-    width: 48px;
-    height: 48px;
+    width: 56px;
+    height: 56px;
     color: var(--primary);
-    filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.5));
+    filter: drop-shadow(0 0 12px rgba(99, 102, 241, 0.6));
 }
 
 @keyframes logoPulse {
@@ -404,7 +414,7 @@ main,
 
 .loader-title {
     font-family: var(--font-display);
-    font-size: 2rem;
+    font-size: 2.4rem;
     font-weight: 700;
     color: var(--text-primary);
     letter-spacing: -0.02em;
@@ -418,8 +428,8 @@ main,
 }
 
 .loader-text {
-    margin-top: 8px;
-    font-size: 1rem;
+    margin-top: 12px;
+    font-size: 1.1rem;
     color: var(--text-secondary);
     animation: textPulse 1.5s ease-in-out infinite;
 }
@@ -463,7 +473,8 @@ main,
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
+    right: 0;
+    width: 100vw;
     height: calc(var(--header-height) + var(--safe-area-top));
     padding-top: var(--safe-area-top);
     padding-left: var(--safe-area-left);
@@ -474,6 +485,8 @@ main,
     border-bottom: 1px solid var(--border);
     z-index: 1000;
     transition: all var(--transition-normal);
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .navbar.scrolled {
@@ -482,13 +495,16 @@ main,
 }
 
 .nav-container {
-    max-width: var(--container-max);
+    max-width: 100%;
+    width: 100%;
     margin: 0 auto;
-    padding: 0 24px;
+    padding: 0 16px;
     height: 100%;
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 12px;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 /* Logo */
@@ -502,6 +518,7 @@ main,
     font-weight: 700;
     color: var(--text-primary);
     transition: transform var(--transition-fast);
+    white-space: nowrap;
 }
 
 .logo:hover {
@@ -509,8 +526,15 @@ main,
 }
 
 .logo-icon {
-    font-size: 1.8rem;
+    display: flex;
+    align-items: center;
+    color: var(--primary);
     animation: bounce 2s ease-in-out infinite;
+}
+
+.logo-icon svg {
+    width: 28px;
+    height: 28px;
 }
 
 @keyframes bounce {
@@ -525,11 +549,44 @@ main,
     -webkit-text-fill-color: transparent;
 }
 
-/* Search */
+/* Nav Search Button - Glass Icon */
+.nav-search-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    background: rgba(99, 102, 241, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: var(--radius-md);
+    color: var(--primary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.nav-search-btn:hover {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: var(--primary);
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+}
+
+.nav-search-btn:active {
+    transform: scale(0.95);
+}
+
+.nav-search-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Keep old nav-search for backwards compatibility but hide */
 .nav-search {
-    flex: 1;
-    max-width: 500px;
-    position: relative;
+    display: none;
 }
 
 .search-wrapper {
@@ -669,8 +726,11 @@ main,
 .nav-menu {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     list-style: none;
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .nav-link {
@@ -705,21 +765,25 @@ main,
 .nav-actions {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 6px;
+    flex-shrink: 0;
+    margin-left: auto;
 }
 
 /* Nav Request & Support Buttons - PROMINENT */
 .nav-request-btn, .nav-support-btn {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
+    gap: 6px;
+    padding: 8px 12px;
     border-radius: var(--radius-md);
     border: none;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     cursor: pointer;
     transition: all var(--transition-fast);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .nav-request-btn {
@@ -754,8 +818,9 @@ main,
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
     background: var(--bg-tertiary);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
@@ -833,15 +898,21 @@ main,
     padding-left: max(24px, var(--safe-area-left));
     padding-right: max(24px, var(--safe-area-right));
     position: relative;
+    overflow-x: hidden;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .hero-content {
     max-width: var(--container-max);
+    width: 100%;
     margin: 0 auto;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 60px;
     align-items: center;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 .hero-text {
@@ -1034,13 +1105,16 @@ main,
 .hero-visual {
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
+    margin-top: -60px;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .hero-game-preview {
     position: relative;
     width: 100%;
-    max-width: 500px;
+    max-width: min(720px, 100%);
     aspect-ratio: 16/10;
     border-radius: var(--radius-xl);
     overflow: hidden;
@@ -1160,6 +1234,7 @@ main,
     color: var(--text-muted);
     font-size: 0.85rem;
     animation: fadeInUp 1s ease 1s both;
+    margin-left: -12px; /* Shift left to center with scroll arrow */
 }
 
 .scroll-arrow {
@@ -1545,6 +1620,9 @@ main,
 
 .games-section {
     padding: 60px 0;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 .section-header {
@@ -1578,8 +1656,12 @@ main,
 /* Games Grid */
 .games-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+    gap: 20px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .games-grid.list-view {
@@ -1606,19 +1688,21 @@ main,
 
 .game-card-image {
     position: relative;
-    aspect-ratio: 16/10;
+    aspect-ratio: 4/3;
     overflow: hidden;
+    background: var(--bg-tertiary);
 }
 
 .game-card-image img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center center;
     transition: transform var(--transition-normal);
 }
 
 .game-card:hover .game-card-image img {
-    transform: scale(1.1);
+    transform: scale(1.05);
 }
 
 .game-card-overlay {
@@ -1936,6 +2020,27 @@ main,
     transition: all var(--transition-fast);
 }
 
+/* Heart button - add stroke for visibility when not filled */
+#modalFavorite svg {
+    stroke: var(--text-secondary);
+    stroke-width: 2;
+}
+
+#modalFavorite:hover svg {
+    stroke: var(--danger);
+    fill: var(--danger) !important;
+}
+
+#modalFavorite.active {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+#modalFavorite.active svg {
+    stroke: var(--danger);
+    fill: var(--danger) !important;
+}
+
 .modal-btn:hover {
     background: var(--bg-card);
     color: var(--text-primary);
@@ -2057,20 +2162,23 @@ main,
    ============================================ */
 
 .featured-section {
-    padding: 80px 0;
+    padding: 40px 0;
     background: var(--bg-secondary);
 }
 
 .featured-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+    gap: 16px;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .featured-card {
     position: relative;
     aspect-ratio: 16/9;
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-lg);
     overflow: hidden;
     cursor: pointer;
 }
@@ -2091,19 +2199,19 @@ main,
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 30px;
+    padding: 16px;
     background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
 }
 
 .featured-card-content h3 {
-    font-size: 1.5rem;
+    font-size: 1.1rem;
     font-weight: 700;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
 }
 
 .featured-card-content p {
     color: var(--text-secondary);
-    font-size: 0.95rem;
+    font-size: 0.8rem;
 }
 
 /* ============================================
@@ -2532,6 +2640,52 @@ main,
     .footer-grid {
         grid-template-columns: 1fr 1fr;
     }
+    
+    /* Hide button text on medium screens */
+    .nav-request-btn span,
+    .nav-support-btn span,
+    .nav-share-btn span {
+        display: none;
+    }
+    
+    .nav-request-btn,
+    .nav-support-btn,
+    .nav-share-btn {
+        padding: 10px;
+    }
+    
+    /* Hide nav-link text on medium screens - show only icons */
+    .nav-link {
+        font-size: 0;
+        padding: 8px;
+        gap: 0;
+    }
+    
+    .nav-link svg {
+        width: 20px;
+        height: 20px;
+    }
+    
+    /* Shrink search bar and hide Ctrl+K hint */
+    .nav-search {
+        max-width: 150px;
+        min-width: 80px;
+    }
+    
+    .search-kbd {
+        display: none;
+    }
+    
+    .nav-search input {
+        padding: 10px 12px 10px 40px;
+        font-size: 0.85rem;
+    }
+    
+    .search-icon {
+        left: 12px;
+        width: 18px;
+        height: 18px;
+    }
 }
 
 @media (max-width: 768px) {
@@ -2659,20 +2813,22 @@ main,
 
 .card-image-wrapper {
     position: relative;
-    aspect-ratio: 16/12;
+    aspect-ratio: 1/1;
     overflow: hidden;
-    background: var(--bg-hover);
+    background: var(--bg-tertiary);
 }
 
 .card-image {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    object-position: center center;
     transition: transform var(--transition-normal);
+    background: var(--bg-tertiary);
 }
 
 .game-card:hover .card-image {
-    transform: scale(1.1);
+    transform: scale(1.05);
 }
 
 .card-overlay {
@@ -2762,12 +2918,12 @@ main,
 
 .featured-badge {
     position: absolute;
-    top: 12px;
-    left: 12px;
-    padding: 6px 12px;
+    top: 8px;
+    left: 8px;
+    padding: 3px 6px;
     background: var(--warning);
     color: #000;
-    font-size: 0.7rem;
+    font-size: 0.55rem;
     font-weight: 700;
     border-radius: var(--radius-full);
     text-transform: uppercase;
@@ -3089,6 +3245,11 @@ main,
 
 .sort-option:last-child {
     border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+
+/* Regular games grid - wider cards for rectangular images */
+.games-grid .card-image-wrapper {
+    aspect-ratio: 16/9;
 }
 
 /* List View Adjustments */
@@ -4002,11 +4163,18 @@ main,
     font-size: 1.8rem;
     width: 44px;
     height: 44px;
+    min-width: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: var(--bg-primary);
     border-radius: var(--radius-md);
+}
+
+.support-option-icon svg {
+    width: 24px;
+    height: 24px;
+    fill: var(--primary);
 }
 
 .support-option-text {
@@ -5893,5 +6061,873 @@ main,
     
     .legal-page {
         padding-top: calc(70px + max(env(safe-area-inset-top, 0px), 25px) + 20px);
+    }
+}
+
+/* ============================
+   NEAL.FUN GAME CARDS - WIDER
+   ============================ */
+
+/* Make all neal.fun game cards wider */
+.game-card[data-game="infinite-craft"],
+.game-card[data-game="password-game"],
+.game-card[data-game="asteroid-launcher"],
+.game-card[data-game="spend-bill-gates-money"],
+.game-card[data-game="absurd-trolley-problems"],
+.game-card[data-game="internet-roadtrip"],
+.game-card[data-game="deep-sea"],
+.game-card[data-game="size-of-space"],
+.game-card[data-game="perfect-circle"],
+.game-card[data-game="lets-settle-this"],
+.game-card[data-game="draw-a-perfect-circle"],
+.game-card[data-game="paper-time"],
+.game-card[data-game="the-size-of-space"],
+.game-card[data-game="make-8-bit-art"],
+.game-card[data-game="internet-artifacts"],
+.game-card[data-game="where-in-the-world"],
+.game-card[data-game="binary-clock"],
+.game-card[data-game="keyboard-simulator"],
+.game-card[data-game="your-birthday-on-mars"],
+.game-card[data-game="progress-bar"] {
+    grid-column: span 1;
+}
+
+/* All neal.fun games in normal game list - square to show full image */
+.game-card[data-game="infinite-craft"] .card-image-wrapper,
+.game-card[data-game="password-game"] .card-image-wrapper,
+.game-card[data-game="asteroid-launcher"] .card-image-wrapper,
+.game-card[data-game="spend-bill-gates-money"] .card-image-wrapper,
+.game-card[data-game="absurd-trolley-problems"] .card-image-wrapper,
+.game-card[data-game="internet-roadtrip"] .card-image-wrapper,
+.game-card[data-game="deep-sea"] .card-image-wrapper,
+.game-card[data-game="size-of-space"] .card-image-wrapper,
+.game-card[data-game="perfect-circle"] .card-image-wrapper,
+.game-card[data-game="lets-settle-this"] .card-image-wrapper,
+.game-card[data-game="draw-a-perfect-circle"] .card-image-wrapper,
+.game-card[data-game="paper-time"] .card-image-wrapper,
+.game-card[data-game="the-size-of-space"] .card-image-wrapper,
+.game-card[data-game="make-8-bit-art"] .card-image-wrapper,
+.game-card[data-game="internet-artifacts"] .card-image-wrapper,
+.game-card[data-game="where-in-the-world"] .card-image-wrapper,
+.game-card[data-game="binary-clock"] .card-image-wrapper,
+.game-card[data-game="keyboard-simulator"] .card-image-wrapper,
+.game-card[data-game="your-birthday-on-mars"] .card-image-wrapper,
+.game-card[data-game="progress-bar"] .card-image-wrapper {
+    aspect-ratio: 21/9;
+}
+
+.game-card[data-game="infinite-craft"] .card-image-wrapper img,
+.game-card[data-game="password-game"] .card-image-wrapper img,
+.game-card[data-game="asteroid-launcher"] .card-image-wrapper img,
+.game-card[data-game="spend-bill-gates-money"] .card-image-wrapper img,
+.game-card[data-game="absurd-trolley-problems"] .card-image-wrapper img,
+.game-card[data-game="internet-roadtrip"] .card-image-wrapper img,
+.game-card[data-game="deep-sea"] .card-image-wrapper img,
+.game-card[data-game="size-of-space"] .card-image-wrapper img,
+.game-card[data-game="perfect-circle"] .card-image-wrapper img,
+.game-card[data-game="lets-settle-this"] .card-image-wrapper img,
+.game-card[data-game="draw-a-perfect-circle"] .card-image-wrapper img,
+.game-card[data-game="paper-time"] .card-image-wrapper img,
+.game-card[data-game="the-size-of-space"] .card-image-wrapper img,
+.game-card[data-game="make-8-bit-art"] .card-image-wrapper img,
+.game-card[data-game="internet-artifacts"] .card-image-wrapper img,
+.game-card[data-game="where-in-the-world"] .card-image-wrapper img,
+.game-card[data-game="binary-clock"] .card-image-wrapper img,
+.game-card[data-game="keyboard-simulator"] .card-image-wrapper img,
+.game-card[data-game="your-birthday-on-mars"] .card-image-wrapper img,
+.game-card[data-game="progress-bar"] .card-image-wrapper img {
+    object-fit: cover;
+    object-position: center top;
+}
+
+/* Neal.fun featured cards - smaller and more horizontal */
+.featured-card[data-game="infinite-craft"],
+.featured-card[data-game="password-game"],
+.featured-card[data-game="asteroid-launcher"],
+.featured-card[data-game="spend-bill-gates-money"],
+.featured-card[data-game="absurd-trolley-problems"],
+.featured-card[data-game="internet-roadtrip"],
+.featured-card[data-game="deep-sea"],
+.featured-card[data-game="size-of-space"],
+.featured-card[data-game="perfect-circle"],
+.featured-card[data-game="lets-settle-this"],
+.featured-card[data-game="draw-a-perfect-circle"],
+.featured-card[data-game="paper-time"],
+.featured-card[data-game="the-size-of-space"],
+.featured-card[data-game="make-8-bit-art"],
+.featured-card[data-game="internet-artifacts"],
+.featured-card[data-game="where-in-the-world"],
+.featured-card[data-game="binary-clock"],
+.featured-card[data-game="keyboard-simulator"],
+.featured-card[data-game="your-birthday-on-mars"],
+.featured-card[data-game="progress-bar"] {
+    aspect-ratio: 21/9;
+    max-height: 150px;
+}
+
+/* On smaller screens, reset aspect ratio */
+@media (max-width: 768px) {
+    .game-card[data-game="infinite-craft"] .card-image-wrapper,
+    .game-card[data-game="password-game"] .card-image-wrapper,
+    .game-card[data-game="asteroid-launcher"] .card-image-wrapper,
+    .game-card[data-game="spend-bill-gates-money"] .card-image-wrapper,
+    .game-card[data-game="absurd-trolley-problems"] .card-image-wrapper,
+    .game-card[data-game="internet-roadtrip"] .card-image-wrapper,
+    .game-card[data-game="deep-sea"] .card-image-wrapper,
+    .game-card[data-game="size-of-space"] .card-image-wrapper,
+    .game-card[data-game="perfect-circle"] .card-image-wrapper,
+    .game-card[data-game="lets-settle-this"] .card-image-wrapper,
+    .game-card[data-game="draw-a-perfect-circle"] .card-image-wrapper,
+    .game-card[data-game="paper-time"] .card-image-wrapper,
+    .game-card[data-game="the-size-of-space"] .card-image-wrapper,
+    .game-card[data-game="make-8-bit-art"] .card-image-wrapper,
+    .game-card[data-game="internet-artifacts"] .card-image-wrapper,
+    .game-card[data-game="where-in-the-world"] .card-image-wrapper,
+    .game-card[data-game="binary-clock"] .card-image-wrapper,
+    .game-card[data-game="keyboard-simulator"] .card-image-wrapper,
+    .game-card[data-game="your-birthday-on-mars"] .card-image-wrapper,
+    .game-card[data-game="progress-bar"] .card-image-wrapper {
+        aspect-ratio: 1/1;
+    }
+    
+    .featured-card[data-game="infinite-craft"],
+    .featured-card[data-game="password-game"],
+    .featured-card[data-game="asteroid-launcher"],
+    .featured-card[data-game="spend-bill-gates-money"],
+    .featured-card[data-game="absurd-trolley-problems"],
+    .featured-card[data-game="internet-roadtrip"],
+    .featured-card[data-game="deep-sea"],
+    .featured-card[data-game="size-of-space"],
+    .featured-card[data-game="perfect-circle"],
+    .featured-card[data-game="lets-settle-this"],
+    .featured-card[data-game="draw-a-perfect-circle"],
+    .featured-card[data-game="paper-time"],
+    .featured-card[data-game="the-size-of-space"],
+    .featured-card[data-game="make-8-bit-art"],
+    .featured-card[data-game="internet-artifacts"],
+    .featured-card[data-game="where-in-the-world"],
+    .featured-card[data-game="binary-clock"],
+    .featured-card[data-game="keyboard-simulator"],
+    .featured-card[data-game="your-birthday-on-mars"],
+    .featured-card[data-game="progress-bar"] {
+        aspect-ratio: 16/9;
+        max-height: none;
+    }
+}
+
+/* ============================
+   MOBILE/TABLET RESPONSIVE FIX
+   ============================ */
+@media (max-width: 1024px) {
+    /* Prevent content from being cut off on sides */
+    html, body {
+        overflow-x: hidden;
+        width: 100%;
+        max-width: 100vw;
+    }
+    
+    .container {
+        padding-left: 16px;
+        padding-right: 16px;
+        max-width: 100%;
+        width: 100%;
+        overflow-x: hidden;
+        box-sizing: border-box;
+    }
+    
+    .games-grid {
+        grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr));
+        gap: 12px;
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .featured-grid {
+        grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr));
+        gap: 12px;
+        width: 100%;
+    }
+    
+    .hero {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+    
+    .section-title {
+        font-size: 1.4rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .container {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    .games-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    
+    .featured-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    
+    .card-content {
+        padding: 8px;
+    }
+    
+    .card-title {
+        font-size: 0.85rem;
+    }
+    
+    .card-description {
+        font-size: 0.7rem;
+        -webkit-line-clamp: 2;
+    }
+    
+    .card-meta {
+        font-size: 0.65rem;
+    }
+    
+    .card-image-wrapper {
+        aspect-ratio: 1/1;
+    }
+    
+    /* Modal on mobile */
+    .modal-content {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+    }
+    
+    .modal-header {
+        padding: 8px 10px;
+    }
+    
+    .modal-title-area h2 {
+        font-size: 0.95rem;
+    }
+    
+    .modal-btn {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .modal-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+    
+    .hero-title {
+        font-size: 1.6rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 0.9rem;
+    }
+    
+    .section-title {
+        font-size: 1.2rem;
+    }
+}
+
+/* ============================
+   iPAD 7th GEN SAFARI FIX
+   ============================ */
+@media screen and (min-width: 768px) and (max-width: 1024px) {
+    .nav-container {
+        padding: 0 8px;
+        gap: 4px;
+    }
+    
+    .logo {
+        font-size: 1.1rem;
+        gap: 4px;
+        flex-shrink: 0;
+    }
+    
+    .logo-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .nav-search {
+        display: none !important;
+    }
+    
+    .nav-menu {
+        gap: 0;
+        flex-shrink: 1;
+        overflow: hidden;
+    }
+    
+    .nav-link {
+        padding: 6px;
+        font-size: 0;
+    }
+    
+    .nav-link svg {
+        width: 16px;
+        height: 16px;
+    }
+    
+    .nav-link span {
+        display: none;
+    }
+    
+    .nav-actions {
+        gap: 2px;
+        flex-shrink: 0;
+    }
+    
+    .nav-share-btn,
+    .nav-request-btn,
+    .nav-support-btn {
+        padding: 6px;
+        font-size: 0;
+    }
+    
+    .nav-share-btn span,
+    .nav-request-btn span,
+    .nav-support-btn span {
+        display: none !important;
+    }
+    
+    .nav-share-btn svg,
+    .nav-request-btn svg,
+    .nav-support-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+    
+    .theme-toggle,
+    .notifications-btn,
+    .user-menu-btn {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .theme-toggle svg,
+    .notifications-btn svg,
+    .user-menu-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+/* ============================================
+   FAST MODE MODAL
+   ============================================ */
+.fast-mode-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.fast-mode-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.fast-mode-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+}
+
+.fast-mode-container {
+    position: relative;
+    background: linear-gradient(145deg, var(--bg-secondary), var(--bg-tertiary));
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+    box-shadow: var(--shadow-xl);
+}
+
+.fast-mode-modal.active .fast-mode-container {
+    transform: translateY(0);
+}
+
+.fast-mode-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    background: var(--gradient-secondary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: pulse 2s infinite;
+}
+
+.fast-mode-icon svg {
+    color: white;
+}
+
+.fast-mode-container h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    color: var(--text-primary);
+}
+
+.fast-mode-container > p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
+
+.fast-mode-features {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+
+.fast-mode-feature {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: var(--success);
+    background: rgba(16, 185, 129, 0.1);
+    padding: 0.4rem 0.8rem;
+    border-radius: var(--radius-full);
+}
+
+.fast-mode-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.fast-mode-btn {
+    padding: 0.9rem 1.5rem;
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: none;
+}
+
+.fast-mode-enable {
+    background: var(--gradient-secondary);
+    color: white;
+    box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
+}
+
+.fast-mode-enable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
+}
+
+.fast-mode-skip {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+}
+
+.fast-mode-skip:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.fast-mode-remember {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.fast-mode-remember input {
+    accent-color: var(--primary);
+}
+
+/* ============================================
+   FAST MODE ACTIVE - SIMPLIFIED UI
+   Like classroom6x style - minimal, fast loading
+   ============================================ */
+body.fast-mode {
+    /* Disable all heavy backgrounds */
+    background: var(--bg-primary) !important;
+}
+
+body.fast-mode .bg-animation,
+body.fast-mode .floating-shapes,
+body.fast-mode .bg-grid,
+body.fast-mode .shape {
+    display: none !important;
+}
+
+body.fast-mode .bg-gradient {
+    background: var(--bg-primary) !important;
+    animation: none !important;
+}
+
+/* Disable all animations */
+body.fast-mode *,
+body.fast-mode *::before,
+body.fast-mode *::after {
+    animation: none !important;
+    transition: none !important;
+}
+
+/* Simplified navbar */
+body.fast-mode .navbar {
+    background: var(--bg-secondary) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+/* Hide heavy hero elements */
+body.fast-mode .hero-visual,
+body.fast-mode .preview-glow,
+body.fast-mode .game-preview-wrapper::after,
+body.fast-mode .btn-glow::before {
+    display: none !important;
+}
+
+/* Simplified hero */
+body.fast-mode .hero {
+    padding: 2rem 0 !important;
+    min-height: auto !important;
+}
+
+body.fast-mode .hero-content {
+    grid-template-columns: 1fr !important;
+    text-align: center !important;
+}
+
+body.fast-mode .hero-stats {
+    justify-content: center !important;
+}
+
+/* Simplified game cards - flat style */
+body.fast-mode .game-card {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: none !important;
+}
+
+body.fast-mode .game-card:hover {
+    transform: none !important;
+    box-shadow: none !important;
+    border-color: var(--primary) !important;
+}
+
+body.fast-mode .card-image {
+    border-radius: var(--radius-sm) !important;
+}
+
+body.fast-mode .game-card:hover .card-image {
+    transform: none !important;
+}
+
+body.fast-mode .card-badges {
+    display: none !important;
+}
+
+/* Simplified buttons */
+body.fast-mode .btn {
+    box-shadow: none !important;
+}
+
+body.fast-mode .btn:hover {
+    transform: none !important;
+}
+
+/* Simplified loading screen */
+body.fast-mode .loading-screen {
+    background: var(--bg-primary) !important;
+}
+
+body.fast-mode .loading-screen::before,
+body.fast-mode .loading-screen::after {
+    display: none !important;
+}
+
+body.fast-mode .loader-cube {
+    animation: none !important;
+    display: none !important;
+}
+
+body.fast-mode .loader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+body.fast-mode .loader::after {
+    content: '';
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite !important;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Simplified modals */
+body.fast-mode .modal-container,
+body.fast-mode .share-container,
+body.fast-mode .contact-container {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* Fast mode indicator */
+body.fast-mode::after {
+    content: '⚡ Fast Mode';
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: var(--gradient-secondary);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.3rem 0.6rem;
+    border-radius: var(--radius-full);
+    z-index: 9999;
+    opacity: 0.7;
+}
+
+/* ============================================
+   PERFORMANCE MODE - FOR LOW-END DEVICES
+   Reduces animations and effects for better performance on iPads/tablets
+   ============================================ */
+@media (prefers-reduced-motion: reduce),
+       (hover: none) and (pointer: coarse) {
+    /* Disable heavy animations */
+    .shape,
+    .bg-grid,
+    .loader-cube,
+    .logo-icon {
+        animation: none !important;
+    }
+    
+    /* Simplify background */
+    .floating-shapes {
+        display: none !important;
+    }
+    
+    .bg-grid {
+        opacity: 0.3;
+    }
+    
+    /* Reduce backdrop blur (very expensive on iPads) */
+    .navbar,
+    .nav-search-btn,
+    .game-modal .modal-container {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+    
+    .navbar {
+        background: rgba(10, 10, 15, 0.98) !important;
+    }
+    
+    /* Disable card hover animations */
+    .game-card {
+        animation: none !important;
+        transition: transform 0.1s ease, box-shadow 0.1s ease !important;
+    }
+    
+    .game-card:hover {
+        transform: translateY(-4px) !important;
+    }
+    
+    /* Disable card image zoom effect */
+    .card-image {
+        transition: none !important;
+    }
+    
+    .game-card:hover .card-image {
+        transform: none !important;
+    }
+    
+    /* Simplify glow effects */
+    .btn-glow::before,
+    .preview-glow,
+    .shadow-glow {
+        display: none !important;
+    }
+    
+    /* Disable floating animations */
+    .animate-float,
+    .hero-visual {
+        animation: none !important;
+    }
+    
+    /* Simplify loading screen */
+    .loading-screen::before {
+        animation: none !important;
+    }
+    
+    /* Reduce transition times globally */
+    * {
+        transition-duration: 0.1s !important;
+    }
+}
+
+/* iOS specific optimizations */
+@supports (-webkit-touch-callout: none) {
+    .floating-shapes {
+        opacity: 0.2;
+    }
+    
+    .shape {
+        filter: blur(40px);
+    }
+    
+    /* Reduce blur intensity for better performance */
+    .navbar {
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+}
+
+/* ============================================
+   iPad-Specific Fixes
+   Addresses game loading issues on iPad devices
+   ============================================ */
+
+/* iPad detection via touch and screen size */
+@media (pointer: coarse) and (min-width: 768px) {
+    /* Force hardware acceleration on game iframes */
+    .game-frame-container iframe,
+    #gameIframe,
+    #gameFrame {
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        -webkit-perspective: 1000;
+        perspective: 1000;
+        /* Prevent Safari from blocking cross-origin iframes */
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* iPad Safari needs explicit height handling */
+    .game-modal.active {
+        height: 100%;
+        height: -webkit-fill-available;
+    }
+    
+    .modal-container {
+        height: 85vh;
+        max-height: none;
+    }
+    
+    .game-frame-container {
+        /* iPad needs explicit sizing */
+        min-height: 400px;
+        height: 100%;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Prevent double-tap zoom on game area */
+    .game-frame-container,
+    .modal-body {
+        touch-action: manipulation;
+    }
+    
+    /* Fix for Safari's handling of fixed positioning */
+    .game-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 100%;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Safari/iOS specific fixes */
+@supports (-webkit-touch-callout: none) {
+    /* Fix for iOS Safari iframe issues */
+    .game-frame-container iframe,
+    #gameIframe,
+    #gameFrame {
+        /* Force WebKit to use GPU compositing */
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0);
+        /* Prevent content from being clipped */
+        -webkit-clip-path: none;
+        clip-path: none;
+    }
+    
+    /* Fix viewport height on iOS */
+    .game-modal,
+    .modal-container,
+    .game-frame-container {
+        height: -webkit-fill-available;
+    }
+    
+    /* Ensure proper scrolling behavior */
+    .game-frame-container {
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Disable momentum scrolling on modal to prevent conflicts */
+    .modal-backdrop {
+        -webkit-overflow-scrolling: auto;
+    }
+}
+
+/* iPad landscape orientation */
+@media (pointer: coarse) and (min-width: 768px) and (orientation: landscape) {
+    .modal-container {
+        height: 90vh;
+        width: 90vw;
+        max-width: none;
+    }
+}
+
+/* iPad portrait orientation */
+@media (pointer: coarse) and (min-width: 768px) and (orientation: portrait) {
+    .modal-container {
+        height: 70vh;
+        width: 95vw;
     }
 }

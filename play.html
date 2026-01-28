@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0a0a0f">
+    <meta name="mobile-web-app-capable" content="yes">
+    <!-- iPad specific -->
+    <meta name="format-detection" content="telephone=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title id="pageTitle">Playing Game - Gemtra Games</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'%3E%3Cpath d='M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4-3c-.83 0-1.5-.67-1.5-1.5S18.67 9 19.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z'/%3E%3C/svg%3E">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            background: #0a0a0f;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            /* Prevent pull-to-refresh on mobile */
+            overscroll-behavior: none;
+            touch-action: none;
+        }
+        
+        /* iPad specific fixes */
+        @supports (-webkit-touch-callout: none) {
+            html, body {
+                /* Fix for iOS Safari */
+                height: -webkit-fill-available;
+                position: fixed;
+                width: 100%;
+            }
+        }
+        
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            height: 100vh;
+            height: 100dvh; /* Dynamic viewport height for mobile */
+        }
+        
+        .game-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.1));
+            border-bottom: 1px solid rgba(99, 102, 241, 0.3);
+            flex-shrink: 0;
+            min-height: 48px;
+            z-index: 100;
+        }
+        
+        .game-title-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+            flex: 1;
+        }
+        
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            flex-shrink: 0;
+        }
+        
+        .back-btn:hover {
+            background: rgba(99, 102, 241, 0.3);
+            border-color: rgba(99, 102, 241, 0.6);
+        }
+        
+        .back-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+        
+        .game-name {
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .game-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        .action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .action-btn:hover {
+            background: rgba(99, 102, 241, 0.3);
+            border-color: rgba(99, 102, 241, 0.5);
+        }
+        
+        .action-btn.active {
+            background: rgba(239, 68, 68, 0.3);
+            border-color: rgba(239, 68, 68, 0.5);
+            color: #ef4444;
+        }
+        
+        .action-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .game-frame-wrapper {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: #000;
+        }
+        
+        #gameFrame {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #000;
+        }
+        
+        /* iPad: Force hardware acceleration */
+        @supports (-webkit-touch-callout: none) {
+            #gameFrame {
+                -webkit-transform: translateZ(0);
+                transform: translateZ(0);
+                -webkit-backface-visibility: hidden;
+                backface-visibility: hidden;
+            }
+        }
+        
+        /* Touch warning for non-touch games */
+        .touch-warning {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(245, 158, 11, 0.2);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            border-radius: 6px;
+            color: #fbbf24;
+            font-size: 12px;
+        }
+        
+        .touch-warning svg {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+        
+        .touch-warning.visible {
+            display: flex;
+        }
+        
+        /* Keyboard shortcuts hint (desktop only) */
+        .keyboard-hint {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        @media (min-width: 768px) and (hover: hover) {
+            .keyboard-hint {
+                display: flex;
+            }
+        }
+        
+        .keyboard-hint kbd {
+            padding: 2px 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 11px;
+        }
+        
+        /* Error state */
+        .error-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #0a0a0f;
+            z-index: 60;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .error-overlay.hidden {
+            display: none;
+        }
+        
+        .error-icon {
+            width: 64px;
+            height: 64px;
+            color: #ef4444;
+            margin-bottom: 16px;
+        }
+        
+        .error-title {
+            color: #fff;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .error-message {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            margin-bottom: 20px;
+            max-width: 400px;
+        }
+        
+        .retry-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .retry-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+        }
+        
+        /* Fullscreen styles */
+        .fullscreen .game-header {
+            display: none;
+        }
+        
+        /* Hide header in actual fullscreen mode */
+        :fullscreen .game-header,
+        :-webkit-full-screen .game-header {
+            display: none;
+        }
+        
+        /* Mobile responsive */
+        @media (max-width: 600px) {
+            .game-header {
+                padding: 6px 8px;
+            }
+            
+            .back-btn span {
+                display: none;
+            }
+            
+            .game-name {
+                font-size: 14px;
+            }
+            
+            .action-btn {
+                width: 36px;
+                height: 36px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container" id="gameContainer">
+        <header class="game-header">
+            <div class="game-title-area">
+                <a href="index.html" class="back-btn" id="backBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    <span>Back</span>
+                </a>
+                <h1 class="game-name" id="gameName">Loading...</h1>
+            </div>
+            <div class="touch-warning" id="touchWarning">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                <span>Keyboard required</span>
+            </div>
+            <div class="keyboard-hint">
+                <span><kbd>ESC</kbd> Back</span>
+                <span><kbd>F</kbd> Fullscreen</span>
+                <span><kbd>R</kbd> Restart</span>
+            </div>
+            <div class="game-actions">
+                <button class="action-btn" id="favoriteBtn" title="Favorite">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                </button>
+                <button class="action-btn" id="fullscreenBtn" title="Fullscreen (F)">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                </button>
+                <button class="action-btn" id="restartBtn" title="Restart (R)">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                </button>
+            </div>
+        </header>
+        
+        <div class="game-frame-wrapper">
+            <div class="error-overlay hidden" id="errorOverlay">
+                <svg class="error-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                </svg>
+                <h2 class="error-title">Failed to load game</h2>
+                <p class="error-message" id="errorMessage">The game could not be loaded. This might be due to network issues or the game being temporarily unavailable.</p>
+                <button class="retry-btn" id="retryBtn">Try Again</button>
+            </div>
+            
+            <iframe id="gameFrame" src="about:blank" title="Game" allow="autoplay; fullscreen; accelerometer; gyroscope; gamepad; microphone; camera; clipboard-write" allowfullscreen></iframe>
+        </div>
+    </div>
+    
+    <script>
+        // ============================================
+        // PLAY PAGE - Lightweight game player
+        // ============================================
+        
+        const PROXY_URL = 'https://gemtra-proxy.modmojheh.workers.dev';
+        const BLOCKED_DOMAINS = [
+            'fngames.io', 'newunblockedgames.gitlab.io', 'classroomgame.github.io',
+            'geodash.org', 'static.8games.net', '8games.net', 'quickimagetools.com',
+            'orteil.dashnet.org', 'dashnet.org'
+        ];
+        
+        // DOM Elements
+        const gameFrame = document.getElementById('gameFrame');
+        const gameName = document.getElementById('gameName');
+        const pageTitle = document.getElementById('pageTitle');
+        const errorOverlay = document.getElementById('errorOverlay');
+        const touchWarning = document.getElementById('touchWarning');
+        const favoriteBtn = document.getElementById('favoriteBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const retryBtn = document.getElementById('retryBtn');
+        const backBtn = document.getElementById('backBtn');
+        const gameContainer = document.getElementById('gameContainer');
+        
+        // State
+        let currentGame = null;
+        let gameKey = null;
+        let favorites = JSON.parse(localStorage.getItem('gemtraFavorites') || '[]');
+        
+        // Get game info from URL params
+        function getGameFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                key: params.get('game'),
+                url: params.get('url'),
+                name: params.get('name'),
+                touchscreen: params.get('touch') === 'true'
+            };
+        }
+        
+        // Check if URL needs proxying
+        function needsProxy(url) {
+            try {
+                const urlObj = new URL(url);
+                return BLOCKED_DOMAINS.some(domain => urlObj.hostname.includes(domain));
+            } catch {
+                return false;
+            }
+        }
+        
+        // Get proxied URL
+        function getProxiedGameUrl(url) {
+            if (!needsProxy(url)) return url;
+            return `${PROXY_URL}/play/${encodeURIComponent(url)}`;
+        }
+        
+        // Check if device is touch-only
+        function isTouchDevice() {
+            return ('ontouchstart' in window) || 
+                   (navigator.maxTouchPoints > 0) || 
+                   (navigator.msMaxTouchPoints > 0);
+        }
+        
+        // Check if iPad
+        function isIPad() {
+            return /iPad/.test(navigator.userAgent) || 
+                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        }
+        
+        // Load the game
+        function loadGame() {
+            const gameInfo = getGameFromUrl();
+            
+            if (!gameInfo.url) {
+                showError('No game URL provided');
+                return;
+            }
+            
+            gameKey = gameInfo.key;
+            currentGame = gameInfo;
+            
+            // Update UI
+            gameName.textContent = gameInfo.name || 'Game';
+            pageTitle.textContent = `${gameInfo.name || 'Game'} - Gemtra Games`;
+            
+            // Show touch warning if needed
+            if (isTouchDevice() && !gameInfo.touchscreen) {
+                touchWarning.classList.add('visible');
+            }
+            
+            // Update favorite button
+            updateFavoriteButton();
+            
+            // Get the game URL (proxied if needed)
+            const gameUrl = getProxiedGameUrl(gameInfo.url);
+            
+            // iPad-specific: Add longer timeout and retry logic
+            let loadTimeout;
+            let loadAttempts = 0;
+            const maxAttempts = isIPad() ? 3 : 1;
+            
+            function attemptLoad() {
+                loadAttempts++;
+                
+                // Clear previous timeout
+                if (loadTimeout) clearTimeout(loadTimeout);
+                
+                // Set loading timeout (longer for iPad)
+                const timeout = isIPad() ? 30000 : 20000;
+                loadTimeout = setTimeout(() => {
+                    if (loadAttempts < maxAttempts) {
+                        console.log(`Load attempt ${loadAttempts} timed out, retrying...`);
+                        attemptLoad();
+                    } else {
+                        showError('Game took too long to load. Try refreshing the page.');
+                    }
+                }, timeout);
+                
+                // Load the game
+                gameFrame.src = gameUrl;
+            }
+            
+            // Handle iframe load
+            gameFrame.onload = () => {
+                clearTimeout(loadTimeout);
+                // Focus iframe for keyboard input
+                gameFrame.focus();
+                
+                // Track play
+                trackPlay();
+            };
+            
+            gameFrame.onerror = () => {
+                clearTimeout(loadTimeout);
+                if (loadAttempts < maxAttempts) {
+                    console.log(`Load attempt ${loadAttempts} failed, retrying...`);
+                    attemptLoad();
+                } else {
+                    showError('Failed to load game');
+                }
+            };
+            
+            // Start loading
+            attemptLoad();
+        }
+        
+        // Show error state
+        function showError(message) {
+            errorOverlay.classList.remove('hidden');
+            document.getElementById('errorMessage').textContent = message;
+        }
+        
+        // Track play (increment counter)
+        function trackPlay() {
+            if (!gameKey) return;
+            
+            // Add to recently played
+            let recentlyPlayed = JSON.parse(localStorage.getItem('gemtraRecent') || '[]');
+            recentlyPlayed = recentlyPlayed.filter(key => key !== gameKey);
+            recentlyPlayed.unshift(gameKey);
+            recentlyPlayed = recentlyPlayed.slice(0, 10);
+            localStorage.setItem('gemtraRecent', JSON.stringify(recentlyPlayed));
+            
+            // Try to increment Firebase play count (if available)
+            try {
+                // This will be handled by the main page when returning
+                const playCounts = JSON.parse(localStorage.getItem('gemtraPlayCounts') || '{}');
+                playCounts[gameKey] = (playCounts[gameKey] || 0) + 1;
+                localStorage.setItem('gemtraPlayCounts', JSON.stringify(playCounts));
+            } catch (e) {}
+        }
+        
+        // Update favorite button state
+        function updateFavoriteButton() {
+            if (!gameKey) return;
+            const isFavorite = favorites.includes(gameKey);
+            favoriteBtn.classList.toggle('active', isFavorite);
+            const svg = favoriteBtn.querySelector('svg');
+            if (svg) {
+                svg.setAttribute('fill', isFavorite ? 'currentColor' : 'none');
+            }
+        }
+        
+        // Toggle favorite
+        function toggleFavorite() {
+            if (!gameKey) return;
+            
+            const index = favorites.indexOf(gameKey);
+            if (index > -1) {
+                favorites.splice(index, 1);
+            } else {
+                favorites.push(gameKey);
+            }
+            
+            localStorage.setItem('gemtraFavorites', JSON.stringify(favorites));
+            updateFavoriteButton();
+        }
+        
+        // Toggle fullscreen
+        function toggleFullscreen() {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                const elem = gameContainer;
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    elem.webkitRequestFullscreen(); // Safari/iOS
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+            }
+        }
+        
+        // Restart game
+        function restartGame() {
+            errorOverlay.classList.add('hidden');
+            gameFrame.src = gameFrame.src;
+        }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Check if iframe is focused
+            const isIframeFocused = document.activeElement === gameFrame;
+            
+            // ESC always works - go back
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            // Only trigger F and R if iframe isn't focused
+            if (!isIframeFocused) {
+                if (e.key === 'f' || e.key === 'F') {
+                    e.preventDefault();
+                    toggleFullscreen();
+                }
+                if (e.key === 'r' || e.key === 'R') {
+                    e.preventDefault();
+                    restartGame();
+                }
+            }
+        });
+        
+        // Event listeners
+        favoriteBtn.addEventListener('click', toggleFavorite);
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
+        restartBtn.addEventListener('click', restartGame);
+        retryBtn.addEventListener('click', restartGame);
+        
+        // Handle fullscreen change
+        document.addEventListener('fullscreenchange', () => {
+            gameContainer.classList.toggle('fullscreen', !!document.fullscreenElement);
+        });
+        document.addEventListener('webkitfullscreenchange', () => {
+            gameContainer.classList.toggle('fullscreen', !!document.webkitFullscreenElement);
+        });
+        
+        // Prevent pull-to-refresh on mobile
+        document.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 1) return; // Allow pinch zoom
+            // Only prevent on the container, not the iframe
+            if (e.target === gameContainer || e.target === document.body) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // iPad: Request wake lock to prevent sleep
+        if (isIPad() && 'wakeLock' in navigator) {
+            navigator.wakeLock.request('screen').catch(() => {});
+        }
+        
+        // Initialize
+        loadGame();
+    </script>
+</body>
+</html>

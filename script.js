@@ -10,7 +10,6 @@ const PROXY_URL = 'https://gemtra-proxy.modmojheh.workers.dev';
 // Domains that need to be proxied (blocked by schools)
 const BLOCKED_DOMAINS = [
     'fngames.io',
-    'run3.io',
     'newunblockedgames.gitlab.io',
     'classroomgame.github.io',
     'geodash.org',
@@ -153,7 +152,7 @@ const GAMES = {
     // === FNAF GAMES (VERIFIED - fngames.io) ===
     'fnaf-1': {
         name: 'Five Nights at Freddy\'s',
-        url: 'https://run3.io/popgame/fnaf/fnaf1/',
+        url: 'https://fngames.io/fnaf.embed',
         description: 'The original horror classic. Survive five nights at Freddy Fazbear\'s Pizza.',
         touchscreen: false,
         image: 'https://fngames.io/cache/data/image/game/fnaf-five-nights-at-freddys-m174x170.jpg',
@@ -163,7 +162,7 @@ const GAMES = {
     },
     'fnaf-2': {
         name: 'Five Nights at Freddy\'s 2',
-        url: 'https://run3.io/popgame/fnaf/fnaf2.html',
+        url: 'https://fngames.io/five-nights-at-freddys-2.embed',
         description: 'More animatronics, more terror. New and improved Freddy Fazbear\'s Pizza.',
         touchscreen: false,
         image: 'https://fngames.io/cache/data/image/game/fnaf-2-m174x170.jpg',
@@ -173,7 +172,7 @@ const GAMES = {
     },
     'fnaf-3': {
         name: 'Five Nights at Freddy\'s 3',
-        url: 'https://mojhehh.github.io/gemtra/fnaf/fnaf3.html',
+        url: 'https://fngames.io/five-nights-at-freddys-3.embed',
         description: 'Springtrap awaits in Fazbear\'s Fright horror attraction.',
         touchscreen: false,
         image: 'https://fngames.io/cache/data/image/game/fnaf-3-m174x170.jpg',
@@ -282,7 +281,7 @@ const GAMES = {
         image: 'https://fngames.io/data/image/game/granny.jpeg',
         category: 'horror',
         featured: true,
-        plays: 89000
+        plays: 89000mojhehh.github.io/gemtra/fnaf/fnaf3.html
     },
     'baldis-basics': {
         name: 'Baldi\'s Basics',

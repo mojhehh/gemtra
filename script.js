@@ -281,7 +281,7 @@ const GAMES = {
         image: 'https://fngames.io/data/image/game/granny.jpeg',
         category: 'horror',
         featured: true,
-        plays: 89000mojhehh.github.io/gemtra/fnaf/fnaf3.html
+        plays: 89000
     },
     'baldis-basics': {
         name: 'Baldi\'s Basics',

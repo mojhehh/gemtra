@@ -5,197 +5,64 @@
 // ============================================
 // PROXY CONFIGURATION
 // ============================================
-const PROXY_CONFIG = {
-    enabled: true,  // Always use proxy
-    workerUrl: 'https://gemtra-proxy.modmojheh.workers.dev',
-    debug: true,    // Enable detailed logging
-    logLevel: 'verbose' // 'verbose', 'debug', 'info', 'warn', 'error'
-};
+const PROXY_URL = 'https://gemtra-proxy.modmojheh.workers.dev';
 
-// ============================================
-// DETAILED LOGGING SYSTEM
-// ============================================
-const ProxyLogger = {
-    styles: {
-        info: 'color: #00d4ff; font-weight: bold;',
-        success: 'color: #00ff64; font-weight: bold;',
-        warn: 'color: #ffa500; font-weight: bold;',
-        error: 'color: #ff4444; font-weight: bold;',
-        debug: 'color: #888; font-style: italic;',
-        verbose: 'color: #666; font-size: 10px;',
-        header: 'color: #ff00ff; font-weight: bold; font-size: 14px; background: #1a1a2e; padding: 4px 8px; border-radius: 4px;'
-    },
-    
-    levels: { verbose: 0, debug: 1, info: 2, warn: 3, error: 4 },
-    
-    currentLevel() {
-        return this.levels[PROXY_CONFIG.logLevel] || 0;
-    },
-    
-    shouldLog(level) {
-        return PROXY_CONFIG.debug && this.levels[level] >= this.currentLevel();
-    },
-    
-    formatTime() {
-        const now = new Date();
-        return `${now.toLocaleTimeString()}.${now.getMilliseconds().toString().padStart(3, '0')}`;
-    },
-    
-    header(msg) {
-        console.log(`%c🎮 [GEMTRA PROXY] ${msg}`, this.styles.header);
-    },
-    
-    info(msg, ...data) {
-        if (!this.shouldLog('info')) return;
-        console.log(`%c[${this.formatTime()}] ℹ️ ${msg}`, this.styles.info, ...data);
-    },
-    
-    success(msg, ...data) {
-        if (!this.shouldLog('info')) return;
-        console.log(`%c[${this.formatTime()}] ✅ ${msg}`, this.styles.success, ...data);
-    },
-    
-    warn(msg, ...data) {
-        if (!this.shouldLog('warn')) return;
-        console.warn(`%c[${this.formatTime()}] ⚠️ ${msg}`, this.styles.warn, ...data);
-    },
-    
-    error(msg, ...data) {
-        if (!this.shouldLog('error')) return;
-        console.error(`%c[${this.formatTime()}] ❌ ${msg}`, this.styles.error, ...data);
-    },
-    
-    debug(msg, ...data) {
-        if (!this.shouldLog('debug')) return;
-        console.log(`%c[${this.formatTime()}] 🔧 ${msg}`, this.styles.debug, ...data);
-    },
-    
-    verbose(msg, ...data) {
-        if (!this.shouldLog('verbose')) return;
-        console.log(`%c[${this.formatTime()}] 📝 ${msg}`, this.styles.verbose, ...data);
-    },
-    
-    table(label, data) {
-        if (!this.shouldLog('debug')) return;
-        console.log(`%c[${this.formatTime()}] 📊 ${label}:`, this.styles.debug);
-        console.table(data);
-    },
-    
-    group(label) {
-        if (!this.shouldLog('debug')) return;
-        console.group(`%c[${this.formatTime()}] 📂 ${label}`, this.styles.info);
-    },
-    
-    groupEnd() {
-        if (!this.shouldLog('debug')) return;
-        console.groupEnd();
-    },
-    
-    network(method, url, status, duration) {
-        if (!this.shouldLog('verbose')) return;
-        const statusColor = status >= 200 && status < 300 ? '#00ff64' : status >= 400 ? '#ff4444' : '#ffa500';
-        console.log(
-            `%c[${this.formatTime()}] 🌐 ${method} %c${url} %c${status} %c(${duration}ms)`,
-            this.styles.verbose,
-            'color: #00d4ff;',
-            `color: ${statusColor}; font-weight: bold;`,
-            'color: #888;'
-        );
-    },
-    
-    iframe(event, details) {
-        if (!this.shouldLog('debug')) return;
-        console.log(`%c[${this.formatTime()}] 🖼️ IFRAME ${event}:`, this.styles.debug, details);
-    }
-};
+// Domains that need to be proxied (blocked by schools)
+const BLOCKED_DOMAINS = [
+    'fngames.io',
+    'run3.io',
+    'newunblockedgames.gitlab.io',
+    'classroomgame.github.io',
+    'geodash.org',
+    'static.8games.net',
+    '8games.net',
+    'quickimagetools.com',
+    'orteil.dashnet.org',
+    'dashnet.org'
+];
 
-// ============================================
-// PROXY URL BUILDER
-// ============================================
-function buildProxyUrl(originalUrl) {
-    ProxyLogger.group('Building Proxy URL');
-    ProxyLogger.verbose('Input URL:', originalUrl);
-    
-    if (!PROXY_CONFIG.enabled) {
-        ProxyLogger.debug('Proxy disabled, returning original URL');
-        ProxyLogger.groupEnd();
-        return originalUrl;
-    }
-    
-    if (!originalUrl || typeof originalUrl !== 'string') {
-        ProxyLogger.error('Invalid URL provided:', originalUrl);
-        ProxyLogger.groupEnd();
-        return originalUrl;
-    }
-    
-    // Don't proxy if already proxied
-    if (originalUrl.includes(PROXY_CONFIG.workerUrl)) {
-        ProxyLogger.debug('URL already proxied, skipping');
-        ProxyLogger.groupEnd();
-        return originalUrl;
-    }
-    
-    // Don't proxy data: or blob: URLs
-    if (originalUrl.startsWith('data:') || originalUrl.startsWith('blob:') || originalUrl.startsWith('about:')) {
-        ProxyLogger.debug('Special URL scheme, skipping proxy:', originalUrl.substring(0, 50));
-        ProxyLogger.groupEnd();
-        return originalUrl;
-    }
-    
-    const proxyUrl = `${PROXY_CONFIG.workerUrl}/play/${originalUrl}`;
-    
-    ProxyLogger.success('Proxy URL built successfully');
-    ProxyLogger.verbose('Original:', originalUrl);
-    ProxyLogger.verbose('Proxied:', proxyUrl);
-    ProxyLogger.groupEnd();
-    
-    return proxyUrl;
-}
-
-// ============================================
-// PROXY HEALTH CHECK
-// ============================================
-async function checkProxyHealth() {
-    ProxyLogger.header('Checking Proxy Health');
-    const startTime = performance.now();
-    
+// Helper to check if URL needs proxying
+function needsProxy(url) {
     try {
-        ProxyLogger.debug('Sending health check request to:', PROXY_CONFIG.workerUrl);
-        
-        const response = await fetch(PROXY_CONFIG.workerUrl, {
-            method: 'GET',
-            mode: 'cors',
-            cache: 'no-cache'
-        });
-        
-        const duration = Math.round(performance.now() - startTime);
-        ProxyLogger.network('GET', PROXY_CONFIG.workerUrl, response.status, duration);
-        
-        if (response.ok) {
-            ProxyLogger.success(`Proxy is healthy! Response time: ${duration}ms`);
-            ProxyLogger.table('Response Headers', Object.fromEntries(response.headers.entries()));
-            return { healthy: true, latency: duration, status: response.status };
-        } else {
-            ProxyLogger.error(`Proxy returned error status: ${response.status}`);
-            return { healthy: false, latency: duration, status: response.status };
-        }
-    } catch (error) {
-        const duration = Math.round(performance.now() - startTime);
-        ProxyLogger.error('Proxy health check failed:', error.message);
-        ProxyLogger.verbose('Error details:', error);
-        return { healthy: false, latency: duration, error: error.message };
+        const urlObj = new URL(url);
+        return BLOCKED_DOMAINS.some(domain => urlObj.hostname.includes(domain));
+    } catch {
+        return false;
     }
 }
 
-// Run health check on load
-if (PROXY_CONFIG.enabled && PROXY_CONFIG.debug) {
-    checkProxyHealth().then(result => {
-        if (result.healthy) {
-            ProxyLogger.success('✅ Proxy ready to use!');
-        } else {
-            ProxyLogger.error('❌ Proxy may have issues:', result);
-        }
-    });
+// Get proxied URL for games
+function getProxiedGameUrl(url) {
+    if (!needsProxy(url)) return url;
+    return `${PROXY_URL}/play/${encodeURIComponent(url)}`;
+}
+
+// Get proxied URL for images - ALWAYS try direct first, proxy on error
+function getProxiedImageUrl(url) {
+    // Return direct URL - handleImageError will try proxy if blocked
+    return url;
+}
+
+// ============================================
+// DEVICE DETECTION HELPERS
+// ============================================
+// Check if device is iPad (including newer iPads that report as MacIntel)
+function isIPad() {
+    return /iPad/.test(navigator.userAgent) || 
+           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+// Check if device is iOS
+function isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+// Check if device is touch-only (no mouse)
+function isTouchDevice() {
+    return ('ontouchstart' in window) || 
+           (navigator.maxTouchPoints > 0) || 
+           (navigator.msMaxTouchPoints > 0);
 }
 
 // ============================================
@@ -249,6 +116,17 @@ const GAMES = {
         category: 'rhythm',
         plays: 45000
     },
+    'wavedash': {
+        name: 'Wavedash',
+        url: 'https://mojhehh.github.io/wavedash/',
+        description: 'Fast-paced rhythm wave game with intense gameplay.',
+        touchscreen: true,
+        image: 'https://quickimagetools.com/uploads/image_696f140c4451c4.62263413.png',
+        category: 'rhythm',
+        featured: true,
+        wideImage: true,
+        plays: 42000
+    },
     'space-waves': {
         name: 'Space Waves',
         url: 'https://marblerun-3d.github.io/game/spacewave/',
@@ -259,10 +137,23 @@ const GAMES = {
         plays: 34000
     },
 
+    // === IO GAMES ===
+    'agar-io': {
+        name: 'Agar.io',
+        url: 'https://www.agar.io/#ffa',
+        description: 'Classic multiplayer cell eating game. Grow your cell and dominate the arena!',
+        touchscreen: true,
+        image: 'https://quickimagetools.com/uploads/image_6972836cb635f6.74980523.png',
+        category: 'arcade',
+        featured: true,
+        newTab: true,
+        plays: 150000
+    },
+
     // === FNAF GAMES (VERIFIED - fngames.io) ===
     'fnaf-1': {
         name: 'Five Nights at Freddy\'s',
-        url: 'https://fngames.io/fnaf.embed',
+        url: 'https://run3.io/popgame/fnaf/fnaf1/',
         description: 'The original horror classic. Survive five nights at Freddy Fazbear\'s Pizza.',
         touchscreen: false,
         image: 'https://fngames.io/cache/data/image/game/fnaf-five-nights-at-freddys-m174x170.jpg',
@@ -272,11 +163,12 @@ const GAMES = {
     },
     'fnaf-2': {
         name: 'Five Nights at Freddy\'s 2',
-        url: 'https://fngames.io/five-nights-at-freddys-2.embed',
+        url: 'https://run3.io/popgame/fnaf/fnaf2.html',
         description: 'More animatronics, more terror. New and improved Freddy Fazbear\'s Pizza.',
         touchscreen: false,
         image: 'https://fngames.io/cache/data/image/game/fnaf-2-m174x170.jpg',
         category: 'horror',
+        featured: true,
         plays: 134000
     },
     'fnaf-3': {
@@ -286,6 +178,7 @@ const GAMES = {
         touchscreen: false,
         image: 'https://fngames.io/cache/data/image/game/fnaf-3-m174x170.jpg',
         category: 'horror',
+        featured: true,
         plays: 98000
     },
     'fnaf-4': {
@@ -295,6 +188,7 @@ const GAMES = {
         touchscreen: false,
         image: 'https://fngames.io/cache/data/image/game/fnaf-4-m174x170.jpg',
         category: 'horror',
+        featured: true,
         plays: 87000
     },
     'fnaf-sister-location': {
@@ -322,7 +216,6 @@ const GAMES = {
         touchscreen: false,
         image: 'https://fngames.io/cache/data/image/game/fnaf-ultimate-custom-night-1-m174x170.jpg',
         category: 'horror',
-        featured: true,
         plays: 112000
     },
     'fnaf-world': {
@@ -352,6 +245,15 @@ const GAMES = {
         category: 'horror',
         plays: 38000
     },
+    'fnaf-shooter': {
+        name: 'FNAF Shooter',
+        url: 'https://html5.gamedistribution.com/eb8346d4739e40eda6e4196dfc9166b7/',
+        description: 'Shoot the animatronics before they get you!',
+        touchscreen: false,
+        image: 'https://fngames.io/cache/data/image/game/fnaf-shooter-1-m174x170.jpg',
+        category: 'horror',
+        plays: 25000
+    },
     'five-nights-at-candys': {
         name: 'Five Nights at Candy\'s',
         url: 'https://fngames.io/five-nights-at-candys.embed',
@@ -379,6 +281,7 @@ const GAMES = {
         touchscreen: false,
         image: 'https://fngames.io/data/image/game/granny.jpeg',
         category: 'horror',
+        featured: true,
         plays: 89000
     },
     'baldis-basics': {
@@ -388,6 +291,7 @@ const GAMES = {
         touchscreen: false,
         image: 'https://fngames.io/cache/data/image/game/baldis-basics-1-m174x170.jpg',
         category: 'horror',
+        featured: true,
         plays: 78000
     },
 
@@ -408,7 +312,6 @@ const GAMES = {
         touchscreen: false,
         image: 'https://geodash.org/games/thumbs/bullet-force_2.webp',
         category: 'action',
-        featured: true,
         plays: 145000
     },
     'kour-io': {
@@ -420,13 +323,13 @@ const GAMES = {
         category: 'action',
         plays: 98000
     },
-    'veck-io': {
-        name: 'Veck.io',
+    'rivals': {
+        name: 'Rivals',
         url: 'https://veck.io/',
-        description: 'Multiplayer IO battle game.',
+        description: 'Fast-paced multiplayer shooter battle game.',
         touchscreen: true,
         image: 'https://geodash.org/games/thumbs/veckio_2.webp',
-        category: 'multiplayer',
+        category: 'action',
         plays: 67000
     },
     'thumb-fighter': {
@@ -456,7 +359,6 @@ const GAMES = {
         touchscreen: true,
         image: 'https://static.8games.net/flash/all/1/igra-fortzone-korolevskaya-bitva.jpg',
         category: 'action',
-        featured: true,
         plays: 87000
     },
     '3d-tanks-battle-city': {
@@ -502,7 +404,6 @@ const GAMES = {
         touchscreen: true,
         image: 'https://static.8games.net/flash/all/1/igra-magicheskaya-bitva-plejgraund.jpg',
         category: 'fighting',
-        featured: true,
         plays: 65000
     },
     'ragdoll-arena': {
@@ -523,7 +424,6 @@ const GAMES = {
         touchscreen: true,
         image: 'https://static.8games.net/flash/all/1/igra-gonki-na-avto-s-tryukami-mega-trampliny.jpg',
         category: 'racing',
-        featured: true,
         plays: 78000
     },
     'ace-moto-rider': {
@@ -582,17 +482,7 @@ const GAMES = {
         touchscreen: true,
         image: 'https://static.8games.net/flash/all/1/igra-vyzhivaniya-mini-kraft.jpg',
         category: 'adventure',
-        featured: true,
         plays: 95000
-    },
-    'minecraft-murder-mystery': {
-        name: 'Minecraft: Murder Mystery',
-        url: 'https://st.8games.net/14/igra-majnkraft-tajna-ubijstva/',
-        description: 'Find the murderer in this Minecraft mystery mode!',
-        touchscreen: true,
-        image: 'https://static.8games.net/flash/all/1/igra-majnkraft-tajna-ubijstva.jpg',
-        category: 'adventure',
-        plays: 72000
     },
     'mine-techno-islands': {
         name: 'Mine: Techno Islands 3D',
@@ -677,15 +567,6 @@ const GAMES = {
         category: 'puzzle',
         plays: 48000
     },
-    'snake-escape-puzzle': {
-        name: 'Snake Escape Puzzle',
-        url: 'https://st.8games.net/12/8g/igra-zmeinyj-pobeg-pazl-golovolomka',
-        description: 'Guide the snake through tricky escape puzzles!',
-        touchscreen: true,
-        image: 'https://static.8games.net/flash/all/1/igra-zmeinyj-pobeg-pazl-golovolomka.jpg',
-        category: 'puzzle',
-        plays: 38000
-    },
     'legendary-plumber': {
         name: 'The Legendary Plumber',
         url: 'https://st.8games.net/12/8g/igra-legendarnyj-santekhnik',
@@ -704,7 +585,6 @@ const GAMES = {
         touchscreen: true,
         image: 'https://static.8games.net/flash/all/1/igra-tetro-bashnya-3d.jpg',
         category: 'arcade',
-        featured: true,
         plays: 65000
     },
     'tetricraft': {
@@ -805,6 +685,1210 @@ const GAMES = {
         image: 'https://static.8games.net/flash/all/1/igra-bitva-karmannoj-armii.jpg',
         category: 'action',
         plays: 42000
+    },
+    // === POKIGAMEZ GAMES WITH REAL THUMBNAILS ===
+    'stickman-hook': {
+        name: 'Stickman Hook',
+        url: 'https://iframe.unblocked-76-games.org/stickman-hook-main/',
+        description: 'Swing through levels as a stickman!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/stickman-hook.png',
+        category: 'arcade',
+        plays: 89500
+    },
+    'jelly-truck': {
+        name: 'Jelly Truck',
+        url: 'https://iframe.unblocked-76-games.org/jelly-truck-main/',
+        description: 'Drive a wobbly jelly truck through obstacles!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/jelly-truck.png',
+        category: 'racing',
+        plays: 67200
+    },
+    'drift-boss': {
+        name: 'Drift Boss',
+        url: 'https://iframe.unblocked-76-games.org/drift-boss-main/',
+        description: 'Master the art of drifting!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/drift-boss.png',
+        category: 'racing',
+        plays: 78300
+    },
+    '8-ball-pool': {
+        name: '8 Ball Pool',
+        url: 'https://iframe.unblocked-76-games.org/8-ball-pool-main/',
+        description: 'Play pool against opponents online!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/8-ball-pool.png',
+        category: 'sports',
+        plays: 95000
+    },
+    '1v1-lol': {
+        name: '1v1 LOL',
+        url: 'https://iframe.unblocked-76-games.org/1v1-lol-main/',
+        description: 'Build and battle in this shooter!',
+        touchscreen: false,
+        image: 'https://pokigamez.github.io/images/1v1-lol.png',
+        category: 'action',
+        plays: 125000
+    },
+    'stick-merge': {
+        name: 'Stick Merge',
+        url: 'https://iframe.unblocked-76-games.org/stick-merge-main/',
+        description: 'Merge stickmen to create powerful warriors!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/stick-merge.png',
+        category: 'arcade',
+        plays: 54200
+    },
+    'flappy-bird': {
+        name: 'Flappy Bird',
+        url: 'https://iframe.unblocked-76-games.org/flappy-bird-main/',
+        description: 'The classic tap-to-fly game!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/flappy-bird.png',
+        category: 'arcade',
+        plays: 112000
+    },
+    '3d-moto-simulator-2': {
+        name: '3D Moto Simulator 2',
+        url: 'https://iframe.unblocked-76-games.org/3d-moto-simulator-2-main/',
+        description: 'Ride motorcycles in a 3D open world!',
+        touchscreen: false,
+        image: 'https://pokigamez.github.io/images/3d-moto-simulator-2.png',
+        category: 'racing',
+        plays: 73400
+    },
+    'level-devil': {
+        name: 'Level Devil',
+        url: 'https://iframe.unblocked-76-games.org/level-devil-main/',
+        description: 'Escape tricky levels with unexpected twists!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/level-devil.png',
+        category: 'puzzle',
+        plays: 86700
+    },
+    'monkey-mart': {
+        name: 'Monkey Mart',
+        url: 'https://iframe.unblocked-76-games.org/monkey-mart-main/',
+        description: 'Run your own supermarket as a monkey!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/monkey-mart.png',
+        category: 'arcade',
+        plays: 98000
+    },
+    'red-ball-4': {
+        name: 'Red Ball 4',
+        url: 'https://iframe.unblocked-76-games.org/red-ball-4-main/',
+        description: 'Roll and jump as a red ball hero!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/red-ball-4.png',
+        category: 'arcade',
+        plays: 79500
+    },
+    'masked-forces': {
+        name: 'Masked Forces',
+        url: 'https://iframe.unblocked-76-games.org/masked-forces-main/',
+        description: 'FPS multiplayer shooter action!',
+        touchscreen: false,
+        image: 'https://pokigamez.github.io/images/masked-forces.png',
+        category: 'action',
+        plays: 65800
+    },
+    'basket-bros': {
+        name: 'Basket Bros',
+        url: 'https://iframe.unblocked-76-games.org/basket-bros-main/',
+        description: 'Fast-paced basketball action!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/basket-bros.png',
+        category: 'sports',
+        plays: 71200
+    },
+    'moto-x3m': {
+        name: 'Moto X3M',
+        url: 'https://iframe.unblocked-76-games.org/moto-x3m-main/',
+        description: 'Extreme motorcycle stunts and racing!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/moto-x3m.png',
+        category: 'racing',
+        plays: 105000
+    },
+    'temple-run-2': {
+        name: 'Temple Run 2',
+        url: 'https://iframe.unblocked-76-games.org/temple-run-2-main/',
+        description: 'Run, slide, and jump in this endless runner!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/temple-run-2.png',
+        category: 'arcade',
+        plays: 118000
+    },
+    'dreadhead-parkour': {
+        name: 'Dreadhead Parkour',
+        url: 'https://iframe.unblocked-76-games.org/dreadhead-parkour-main/',
+        description: 'Parkour through urban environments!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/dreadhead-parkour.png',
+        category: 'arcade',
+        plays: 82300
+    },
+    'hills-of-steel': {
+        name: 'Hills Of Steel',
+        url: 'https://iframe.unblocked-76-games.org/hills-of-steel-main/',
+        description: 'Tank battles on hilly terrain!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/hills-of-steel.png',
+        category: 'action',
+        plays: 68900
+    },
+    'ovo-game': {
+        name: 'OvO',
+        url: 'https://iframe.unblocked-76-games.org/ovo-main/',
+        description: 'Fast-paced platformer with smooth controls!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/ovo.png',
+        category: 'arcade',
+        plays: 91500
+    },
+    'bitlife': {
+        name: 'Bitlife',
+        url: 'https://iframe.unblocked-76-games.org/bitlife-main',
+        description: 'Live your life simulation!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/bitlife.png',
+        category: 'arcade',
+        featured: true,
+        plays: 87600
+    },
+    'bacon-may-die': {
+        name: 'Bacon May Die',
+        url: 'https://iframe.unblocked-76-games.org/bacon-may-die-main/',
+        description: 'Fight as a pig against endless enemies!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/bacon-may-die.png',
+        category: 'action',
+        plays: 59200
+    },
+    'super-mario-bros': {
+        name: 'Super Mario Bros',
+        url: 'https://iframe.unblocked-76-games.org/super-mario-bros-main/',
+        description: 'The classic platformer adventure!',
+        touchscreen: false,
+        image: 'https://pokigamez.github.io/images/super-mario-bros.png',
+        category: 'arcade',
+        plays: 145000
+    },
+    'funny-shooter-2': {
+        name: 'Funny Shooter 2',
+        url: 'https://iframe.unblocked-76-games.org/funny-shooter-2-main/',
+        description: 'Hilarious FPS action!',
+        touchscreen: false,
+        image: 'https://pokigamez.github.io/images/funny-shooter-2.png',
+        category: 'action',
+        plays: 72800
+    },
+    'awesome-tanks-2': {
+        name: 'Awesome Tanks 2',
+        url: 'https://iframe.unblocked-76-games.org/awesome-tanks-2-main/',
+        description: 'Upgrade your tank and destroy enemies!',
+        touchscreen: false,
+        image: 'https://pokigamez.github.io/images/awesome-tanks-2.png',
+        category: 'action',
+        plays: 64500
+    },
+    'retro-bowl': {
+        name: 'Retro Bowl',
+        url: 'https://iframe.unblocked-76-games.org/retro-bowl-main/',
+        description: 'Retro-style American football!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/retro-bowl.png',
+        category: 'sports',
+        plays: 156000
+    },
+    '10-minutes-till-dawn': {
+        name: '10 Minutes Till Dawn',
+        url: 'https://iframe.unblocked-76-games.org/10-minutes-till-dawn-main/',
+        description: 'Survive waves of monsters for 10 minutes!',
+        touchscreen: false,
+        image: 'https://pokigamez.github.io/images/10-minutes-till-dawn.png',
+        category: 'action',
+        plays: 78100
+    },
+    'slope-game': {
+        name: 'Slope',
+        url: 'https://iframe.unblocked-76-games.org/slope-main/',
+        description: 'Roll down an endless slope at high speed!',
+        touchscreen: false,
+        image: 'https://pokigamez.github.io/images/slope.png',
+        category: 'arcade',
+        plays: 167000
+    },
+    'raft-wars': {
+        name: 'Raft Wars',
+        url: 'https://iframe.unblocked-76-games.org/raft-wars-main/',
+        description: 'Defend your treasure with a raft!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/raft-wars.png',
+        category: 'action',
+        plays: 83400
+    },
+    'bubble-shooter': {
+        name: 'Bubble Shooter',
+        url: 'https://iframe.unblocked-76-games.org/bubble-shooter-main/',
+        description: 'Classic bubble popping puzzle game!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/bubble-shooter.png',
+        category: 'puzzle',
+        plays: 94000
+    },
+    'master-chess': {
+        name: 'Master Chess',
+        url: 'https://iframe.unblocked-76-games.org/master-chess-main/',
+        description: 'Play chess against AI or friends!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/master-chess.png',
+        category: 'puzzle',
+        plays: 52300
+    },
+    'bloxorz-puzzle': {
+        name: 'Bloxorz',
+        url: 'https://iframe.unblocked-76-games.org/bloxorz-main/',
+        description: 'Roll the block into the hole!',
+        touchscreen: false,
+        image: 'https://pokigamez.github.io/images/bloxorz.png',
+        category: 'puzzle',
+        plays: 71800
+    },
+    'big-shot-boxing': {
+        name: 'Big Shot Boxing',
+        url: 'https://iframe.unblocked-76-games.org/big-shot-boxing-main/',
+        description: 'Become a boxing champion!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/big-shot-boxing.png',
+        category: 'sports',
+        plays: 58700
+    },
+    'earn-to-die': {
+        name: 'Earn To Die',
+        url: 'https://iframe.unblocked-76-games.org/earn-to-die-main/',
+        description: 'Drive through zombies to escape!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/earn-to-die.png',
+        category: 'racing',
+        plays: 87200
+    },
+    'tunnel-rush': {
+        name: 'Tunnel Rush',
+        url: 'https://iframe.unblocked-76-games.org/tunnel-rush-main/',
+        description: 'Race through a colorful tunnel!',
+        touchscreen: false,
+        image: 'https://pokigamez.github.io/images/tunnel-rush.png',
+        category: 'arcade',
+        plays: 123000
+    },
+    'drift-hunters': {
+        name: 'Drift Hunters',
+        url: 'https://iframe.unblocked-76-games.org/drift-hunters-main/',
+        description: '3D drifting with customizable cars!',
+        touchscreen: false,
+        image: 'https://pokigamez.github.io/images/drift-hunters.png',
+        category: 'racing',
+        plays: 142000
+    },
+    // === MORE POKIGAMEZ GAMES ===
+    'cookie-clicker': {
+        name: 'Cookie Clicker',
+        url: 'https://iframe.unblocked-76-games.org/cookie-clicker-main',
+        description: 'Click cookies and build your empire!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/cookie-clicker.png',
+        category: 'idle',
+        featured: true,
+        plays: 325000
+    },
+    'among-us': {
+        name: 'Among Us',
+        url: 'https://iframe.unblocked-76-games.org/among-us-main',
+        description: 'Find the impostor among the crew!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/among-us.png',
+        category: 'multiplayer',
+        plays: 450000
+    },
+    'battle-wheels': {
+        name: 'Battle Wheels',
+        url: 'https://iframe.unblocked-76-games.org/battle-wheels-main/',
+        description: 'Vehicular combat action game!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/battle-wheels.png',
+        category: 'action',
+        plays: 76000
+    },
+    'flip-bros': {
+        name: 'Flip Bros',
+        url: 'https://iframe.unblocked-76-games.org/flip-bros-main/',
+        description: 'Flip and fight your way to victory!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/flip-bros.png',
+        category: 'action',
+        plays: 54000
+    },
+    '10-minutes-till-dawn': {
+        name: '10 Minutes Till Dawn',
+        url: 'https://iframe.unblocked-76-games.org/10-minutes-till-dawn-main/',
+        description: 'Survive waves of enemies until dawn!',
+        touchscreen: false,
+        image: 'https://pokigamez.github.io/images/10-minutes-till-dawn.png',
+        category: 'action',
+        plays: 89000
+    },
+    'kart-bros': {
+        name: 'Kart Bros',
+        url: 'https://iframe.unblocked-76-games.org/kart-bros-main/',
+        description: 'Race karts with your friends!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/kart-bros.png',
+        category: 'racing',
+        plays: 67000
+    },
+    '4th-and-goal-2022': {
+        name: '4th and Goal 2022',
+        url: 'https://iframe.unblocked-76-games.org/4th-and-goal-2022-main/',
+        description: 'American football action game!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/4th-and-goal-2022.png',
+        category: 'sports',
+        plays: 112000
+    },
+    'blumgi-castle': {
+        name: 'Blumgi Castle',
+        url: 'https://iframe.unblocked-76-games.org/blumgi-castle-main/',
+        description: 'Jump and bounce through castle levels!',
+        touchscreen: true,
+        image: 'https://pokigamez.github.io/images/blumgi-castle.png',
+        category: 'arcade',
+        plays: 45000
+    },
+    // === NEWUNBLOCKEDGAMES GAMES ===
+    'minecraft-188': {
+        name: 'Minecraft 1.8.8',
+        url: 'https://genizymath.github.io/iframe/181.html',
+        description: 'Classic Minecraft in your browser!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/minecraft-188.png',
+        category: 'adventure',
+        plays: 215000
+    },
+    'clash-royale': {
+        name: 'Clash Royale',
+        url: 'https://newunblockedgames.gitlab.io/assets/game/clash-royale.html',
+        description: 'Strategic card battle game!',
+        touchscreen: true,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/clash-royale.png',
+        category: 'action',
+        plays: 187000
+    },
+    'super-hot': {
+        name: 'Super Hot',
+        url: 'https://scrap-metal.github.io/s8/super-hot/',
+        description: 'Time moves only when you move!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/super-hot.png',
+        category: 'action',
+        plays: 134000
+    },
+    'granny-horror': {
+        name: 'Granny',
+        url: 'https://genizymath.github.io/iframe/90.html',
+        description: 'Escape from Granny\'s house!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/granny.png',
+        category: 'horror',
+        plays: 167000
+    },
+    'subway-surfers-sf': {
+        name: 'Subway Surfers San Francisco',
+        url: 'https://nb-ga.github.io/games-site/projects/subway-surfers-san-francisco/index.html',
+        description: 'Endless running through San Francisco!',
+        touchscreen: true,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/subway-surfers-san-francisco.png',
+        category: 'arcade',
+        plays: 198000
+    },
+    'basket-random': {
+        name: 'Basket Random',
+        url: 'https://tylerpalko.github.io/gamehub/basketrandom/',
+        description: 'Crazy basketball with random physics!',
+        touchscreen: true,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/basket-random.png',
+        category: 'sports',
+        plays: 89000
+    },
+    'google-snake': {
+        name: 'Google Snake',
+        url: 'https://googlesnake-online.github.io/file/',
+        description: 'The classic Google snake game!',
+        touchscreen: true,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/google-snake.png',
+        category: 'arcade',
+        plays: 145000
+    },
+    '2048-game': {
+        name: '2048',
+        url: 'https://tylerpalko.github.io/gamehub/2048/',
+        description: 'Combine tiles to reach 2048!',
+        touchscreen: true,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/2048.png',
+        category: 'puzzle',
+        plays: 134000
+    },
+    'electric-man-2': {
+        name: 'Electric Man 2',
+        url: 'https://ultimatemen.github.io/games/em2/index.html',
+        description: 'Stickman fighting action!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/electric-man-2.png',
+        category: 'fighting',
+        plays: 112000
+    },
+    'getaway-shootout': {
+        name: 'Getaway Shootout',
+        url: 'https://unblockedgames76.gitlab.io/getaway-shootout/',
+        description: 'Race and shoot your way to escape!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/getaway-shootout.png',
+        category: 'action',
+        plays: 98000
+    },
+    'half-life': {
+        name: 'Half Life',
+        url: 'https://genizymath.github.io/iframe/262.html',
+        description: 'Classic FPS adventure!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/half-life.png',
+        category: 'action',
+        plays: 156000
+    },
+    'shell-shockers': {
+        name: 'Shell Shockers',
+        url: 'https://gameinclassroom.github.io/shell-shockers/',
+        description: 'Egg-themed multiplayer shooter!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/shell-shockers.png',
+        category: 'multiplayer',
+        plays: 187000
+    },
+    'the-baby-in-yellow': {
+        name: 'The Baby in Yellow',
+        url: 'https://gnhustgames.github.io/babyinyellow/',
+        description: 'Spooky babysitting horror game!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/the-baby-in-yellow.png',
+        category: 'horror',
+        plays: 134000
+    },
+    'madalin-stunt-cars-3': {
+        name: 'Madalin Stunt Cars 3',
+        url: 'https://unblockedgames66.gitlab.io/madalin-stunt-cars-3/',
+        description: 'Epic car stunts and multiplayer racing!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/madalin-stunt-cars-3.png',
+        category: 'racing',
+        plays: 178000
+    },
+    'only-up': {
+        name: 'Only Up!',
+        url: 'https://sz-games.github.io/Games8/only-up/',
+        description: 'Climb higher and higher!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/only-up.png',
+        category: 'arcade',
+        plays: 145000
+    },
+    'moto-x3m-spooky': {
+        name: 'Moto X3M Spooky Land',
+        url: 'https://games-site.github.io/projects/moto-x3m-spooky-land/index.html',
+        description: 'Halloween-themed motorcycle stunts!',
+        touchscreen: true,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/moto-x3m-spooky-land.png',
+        category: 'racing',
+        plays: 123000
+    },
+    'grindcraft-remastered': {
+        name: 'Grindcraft Remastered',
+        url: 'https://hypackel.github.io/projects/grindcraft/index.html',
+        description: 'Minecraft-style crafting clicker!',
+        touchscreen: true,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/grindcraft-remastered.png',
+        category: 'arcade',
+        plays: 98000
+    },
+    'cluster-rush': {
+        name: 'Cluster Rush',
+        url: 'https://ubgwtf.gitlab.io/cluster-rush/',
+        description: 'Jump between moving trucks!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/cluster-rush.png',
+        category: 'arcade',
+        plays: 167000
+    },
+    'house-of-hazards': {
+        name: 'House of Hazards',
+        url: 'https://genizymath.github.io/iframe/339.html',
+        description: 'Multiplayer obstacle madness!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/house-of-hazards.png',
+        category: 'multiplayer',
+        plays: 112000
+    },
+    'pokemon-emerald': {
+        name: 'Pokemon Emerald',
+        url: 'https://bobzgames.github.io/GBA/launcher.html#pokemonemerald',
+        description: 'Classic Pokemon adventure!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/pokemon-emerald.png',
+        category: 'adventure',
+        plays: 234000
+    },
+    'thats-not-my-neighbor': {
+        name: 'That\'s Not My Neighbor',
+        url: 'https://genizymath.github.io/iframe/216.html',
+        description: 'Spot the doppelgangers!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/thats-not-my-neighbour.png',
+        category: 'horror',
+        plays: 156000
+    },
+    'tiny-fishing': {
+        name: 'Tiny Fishing',
+        url: 'https://unblocked-76-77.github.io/_games/tiny-fishing/',
+        description: 'Relaxing fishing idle game!',
+        touchscreen: true,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/tiny-fishing.png',
+        category: 'arcade',
+        plays: 134000
+    },
+    'hollow-knight': {
+        name: 'Hollow Knight',
+        url: 'https://gnhustgames.github.io/hollow-knight/',
+        description: 'Epic metroidvania adventure!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/hollow-knight.png',
+        category: 'adventure',
+        plays: 178000
+    },
+    'slither-io': {
+        name: 'Slither.io',
+        url: 'https://drive-mad-76.github.io/repo1/lesson-194/',
+        description: 'Grow your snake and dominate!',
+        touchscreen: true,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/slitherio.png',
+        category: 'multiplayer',
+        plays: 198000
+    },
+    'street-fighter-2': {
+        name: 'Street Fighter 2',
+        url: 'https://unblockedgames200.github.io/games3/fighter2',
+        description: 'Classic arcade fighting!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/street-fighter-2.png',
+        category: 'fighting',
+        plays: 145000
+    },
+    'snow-rider-3d': {
+        name: 'Snow Rider 3D',
+        url: 'https://tylerpalko.github.io/gamehub/snowrider3d/',
+        description: 'Snowboard down endless slopes!',
+        touchscreen: true,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/snow-rider-3d.png',
+        category: 'racing',
+        plays: 134000
+    },
+    'smash-karts': {
+        name: 'Smash Karts',
+        url: 'https://smash-karts.gitlab.io/file/',
+        description: 'Battle kart racing mayhem!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/smash-karts.png',
+        category: 'racing',
+        plays: 189000
+    },
+    'paper-io-2': {
+        name: 'Paper.io 2',
+        url: 'https://paperio-2.github.io/a9/paper-io-2/',
+        description: 'Conquer territory!',
+        touchscreen: true,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/paperio-2.png',
+        category: 'multiplayer',
+        plays: 167000
+    },
+    'bad-time-simulator': {
+        name: 'Bad Time Simulator',
+        url: 'https://jcw87.github.io/c2-sans-fight/',
+        description: 'Fight Sans from Undertale!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/bad-time-simulator.png',
+        category: 'fighting',
+        plays: 178000
+    },
+    '12-minibattles': {
+        name: '12 MiniBattles',
+        url: 'https://rebemanae.github.io/12-minibattles/',
+        description: '12 fun minigames for 2 players!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/12-minibattles.png',
+        category: 'multiplayer',
+        plays: 98000
+    },
+    'rooftop-snipers': {
+        name: 'Rooftop Snipers',
+        url: 'https://jasongamesdev.github.io/rooftop-sniper/',
+        description: '2-player rooftop battles!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/rooftop-snipers.png',
+        category: 'action',
+        plays: 134000
+    },
+    
+    // === NEW GAMES FROM BLOCK-BLAST-PUZZLE ===
+    'bloxd-io': {
+        name: 'Bloxd.io',
+        url: 'https://block-blast-puzzle.github.io/bloxd-io.html',
+        description: 'Minecraft-style multiplayer with various game modes!',
+        touchscreen: false,
+        image: 'https://block-blast-puzzle.github.io/images/icon/bloxd-io.jpg',
+        category: 'multiplayer',
+        featured: true,
+        plays: 245000
+    },
+    'venge-io': {
+        name: 'Venge.io',
+        url: 'https://block-blast-puzzle.github.io/venge-io.html',
+        description: 'Fast-paced multiplayer FPS shooter!',
+        touchscreen: false,
+        image: 'https://block-blast-puzzle.github.io/images/icon/venge-io.jpg',
+        category: 'shooter',
+        featured: true,
+        plays: 198000
+    },
+    'krunker-io': {
+        name: 'Krunker.io',
+        url: 'https://block-blast-puzzle.github.io/krunker-io.html',
+        description: 'Pixel-style FPS with fast gameplay!',
+        touchscreen: false,
+        image: 'https://block-blast-puzzle.github.io/images/icon/krunker-io.jpg',
+        category: 'shooter',
+        featured: true,
+        plays: 312000
+    },
+    'zombs-royale': {
+        name: 'Zombs Royale',
+        url: 'https://block-blast-puzzle.github.io/zombs-royale.html',
+        description: '2D battle royale - last one standing wins!',
+        touchscreen: true,
+        image: 'https://block-blast-puzzle.github.io/images/icon/zombs-royale.jpg',
+        category: 'shooter',
+        plays: 178000
+    },
+    'ev-io': {
+        name: 'Ev.io',
+        url: 'https://block-blast-puzzle.github.io/ev-io.html',
+        description: 'Futuristic arena FPS shooter!',
+        touchscreen: false,
+        image: 'https://block-blast-puzzle.github.io/images/icon/ev-io.jpeg',
+        category: 'shooter',
+        plays: 156000
+    },
+    'hole-io': {
+        name: 'Hole.io',
+        url: 'https://block-blast-puzzle.github.io/hole-io.html',
+        description: 'Become a black hole and swallow everything!',
+        touchscreen: true,
+        image: 'https://block-blast-puzzle.github.io/images/icon/hole-io.jpg',
+        category: 'casual',
+        plays: 234000
+    },
+    'starblast': {
+        name: 'StarBlast',
+        url: 'https://block-blast-puzzle.github.io/star-blast.html',
+        description: 'Space shooter with upgradeable ships!',
+        touchscreen: false,
+        image: 'https://block-blast-puzzle.github.io/images/icon/star-blast.jpg',
+        category: 'shooter',
+        plays: 145000
+    },
+    'build-royale': {
+        name: 'Build Royale',
+        url: 'https://block-blast-puzzle.github.io/build-royale.html',
+        description: 'Battle royale with building mechanics!',
+        touchscreen: false,
+        image: 'https://block-blast-puzzle.github.io/images/icon/build-royale.png',
+        category: 'shooter',
+        plays: 167000
+    },
+    'battledudes-io': {
+        name: 'BattleDudes.io',
+        url: 'https://block-blast-puzzle.github.io/battle-dudes-io.html',
+        description: 'Top-down multiplayer shooter!',
+        touchscreen: false,
+        image: 'https://block-blast-puzzle.github.io/images/icon/battle-dudes-io.jpg',
+        category: 'shooter',
+        plays: 123000
+    },
+    'craftnite-io': {
+        name: 'Craftnite.io',
+        url: 'https://block-blast-puzzle.github.io/craftnite-io.html',
+        description: 'Fortnite-style battle royale!',
+        touchscreen: false,
+        image: 'https://block-blast-puzzle.github.io/images/icon/craftnite-io.jpg',
+        category: 'shooter',
+        plays: 134000
+    },
+    'little-big-snake': {
+        name: 'Little Big Snake',
+        url: 'https://block-blast-puzzle.github.io/little-big-snake.html',
+        description: 'Slither and grow in this multiplayer snake game!',
+        touchscreen: true,
+        image: 'https://block-blast-puzzle.github.io/images/icon/little-big-snake.jpg',
+        category: 'multiplayer',
+        plays: 189000
+    },
+    '2048-game': {
+        name: '2048',
+        url: 'https://block-blast-puzzle.github.io/2048.html',
+        description: 'Slide tiles and reach 2048!',
+        touchscreen: true,
+        image: 'https://block-blast-puzzle.github.io/images/icon/2048.jpg',
+        category: 'puzzle',
+        plays: 267000
+    },
+    'block-blast': {
+        name: 'Block Blast',
+        url: 'https://block-blast-puzzle.github.io/file',
+        description: 'Drag, match, and clear blocks to score points!',
+        touchscreen: true,
+        image: 'https://block-blast-puzzle.github.io/images/icon_game.png',
+        category: 'puzzle',
+        featured: true,
+        plays: 345000
+    },
+    
+    // === NEAL.FUN GAMES ===
+    'infinite-craft': {
+        name: 'Infinite Craft',
+        url: 'https://infinite-craft.modmojheh.workers.dev/infinite-craft/',
+        newTab: false,
+        description: 'Combine elements to create anything!',
+        touchscreen: true,
+        image: 'infinite-craft.svg',
+        category: 'puzzle',
+        featured: true,
+        plays: 890000
+    },
+    'password-game': {
+        name: 'The Password Game',
+        url: 'https://neal.fun/password-game/',
+        newTab: true,
+        description: 'Create a password that follows increasingly absurd rules!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/password-game.svg',
+        category: 'puzzle',
+        featured: true,
+        plays: 567000
+    },
+    'asteroid-launcher': {
+        name: 'Asteroid Launcher',
+        url: 'https://neal.fun/asteroid-launcher/',
+        newTab: true,
+        description: 'Launch asteroids at Earth and see the destruction!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/asteroid-launcher.svg',
+        category: 'simulation',
+        plays: 345000
+    },
+    'spend-bill-gates-money': {
+        name: 'Spend Bill Gates Money',
+        url: 'https://neal.fun/spend/',
+        newTab: true,
+        description: 'Try to spend $100 billion!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/spend.svg',
+        category: 'simulation',
+        plays: 423000
+    },
+    'absurd-trolley-problems': {
+        name: 'Absurd Trolley Problems',
+        url: 'https://neal.fun/absurd-trolley-problems/',
+        newTab: true,
+        description: 'Make impossible moral choices!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/absurd-trolley-problems.svg',
+        category: 'puzzle',
+        plays: 312000
+    },
+    'internet-roadtrip': {
+        name: 'Internet Roadtrip',
+        url: 'https://neal.fun/internet-roadtrip/',
+        newTab: true,
+        description: 'Endless road trip through Google Street View!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/internet-roadtrip.svg',
+        category: 'simulation',
+        plays: 234000
+    },
+    'deep-sea': {
+        name: 'Deep Sea',
+        url: 'https://neal.fun/deep-sea/',
+        newTab: true,
+        description: 'Explore the depths of the ocean!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/deep-sea.svg',
+        category: 'educational',
+        plays: 278000
+    },
+    'size-of-space': {
+        name: 'Size of Space',
+        url: 'https://neal.fun/size-of-space/',
+        newTab: true,
+        description: 'Scroll through the universe!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/size-of-space.svg',
+        category: 'educational',
+        plays: 256000
+    },
+    'perfect-circle': {
+        name: 'Perfect Circle',
+        url: 'https://neal.fun/perfect-circle/',
+        newTab: true,
+        description: 'Draw a perfect circle - harder than it sounds!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/perfect-circle.svg',
+        category: 'casual',
+        plays: 189000
+    },
+    'auction-game': {
+        name: 'Auction Game',
+        url: 'https://neal.fun/auction-game/',
+        newTab: true,
+        description: 'Guess the auction prices of famous items!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/auction-game.svg',
+        category: 'trivia',
+        plays: 167000
+    },
+    'stimulation-clicker': {
+        name: 'Stimulation Clicker',
+        url: 'https://neal.fun/stimulation-clicker/',
+        newTab: true,
+        description: 'Click for maximum dopamine!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/stimulation-clicker.svg',
+        category: 'clicker',
+        plays: 234000
+    },
+    'space-elevator': {
+        name: 'Space Elevator',
+        url: 'https://neal.fun/space-elevator/',
+        newTab: true,
+        description: 'Ride an elevator to space!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/space-elevator.svg',
+        category: 'educational',
+        plays: 198000
+    },
+    'printing-money': {
+        name: 'Printing Money',
+        url: 'https://neal.fun/printing-money/',
+        newTab: true,
+        description: 'Watch money being printed in real-time!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/printing-money.svg',
+        category: 'simulation',
+        plays: 145000
+    },
+    'design-the-next-iphone': {
+        name: 'Design the Next iPhone',
+        url: 'https://neal.fun/design-the-next-iphone/',
+        newTab: true,
+        description: 'Create your own iPhone design!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/design-the-next-iphone.svg',
+        category: 'creative',
+        plays: 178000
+    },
+    'sell-sell-sell': {
+        name: 'Sell Sell Sell',
+        url: 'https://neal.fun/sell-sell-sell/',
+        newTab: true,
+        description: 'Sell everything before time runs out!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/sell-sell-sell.svg',
+        category: 'casual',
+        plays: 134000
+    },
+    'dark-patterns': {
+        name: 'Dark Patterns',
+        url: 'https://neal.fun/dark-patterns/',
+        newTab: true,
+        description: 'Experience manipulative UI design!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/dark-patterns.svg',
+        category: 'educational',
+        plays: 156000
+    },
+    'earth-reviews': {
+        name: 'Earth Reviews',
+        url: 'https://neal.fun/earth-reviews/',
+        newTab: true,
+        description: 'Read alien reviews of Earth!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/earth-reviews.svg',
+        category: 'casual',
+        plays: 123000
+    },
+    'lets-settle-this': {
+        name: "Let's Settle This",
+        url: 'https://neal.fun/lets-settle-this/',
+        newTab: true,
+        description: 'Vote on controversial debates!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/lets-settle-this.svg',
+        category: 'trivia',
+        plays: 145000
+    },
+    'ambient-chaos': {
+        name: 'Ambient Chaos',
+        url: 'https://neal.fun/ambient-chaos/',
+        newTab: true,
+        description: 'Create your own chaotic soundscape!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/ambient-chaos.svg',
+        category: 'creative',
+        plays: 98000
+    },
+    'rocks': {
+        name: 'Rocks',
+        url: 'https://neal.fun/rocks/',
+        newTab: true,
+        description: 'Collect and identify rocks!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/rocks.svg',
+        category: 'educational',
+        plays: 87000
+    },
+    'universe-forecast': {
+        name: 'Universe Forecast',
+        url: 'https://neal.fun/universe-forecast/',
+        newTab: true,
+        description: 'Weather forecast for the universe!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/universe-forecast.svg',
+        category: 'educational',
+        plays: 112000
+    },
+    'life-stats': {
+        name: 'Life Stats',
+        url: 'https://neal.fun/life-stats/',
+        newTab: true,
+        description: 'See stats about your life!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/life-stats.svg',
+        category: 'simulation',
+        plays: 198000
+    },
+    'who-was-alive': {
+        name: 'Who Was Alive',
+        url: 'https://neal.fun/who-was-alive/',
+        newTab: true,
+        description: 'See who was alive in any year!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/who-was-alive.svg',
+        category: 'educational',
+        plays: 167000
+    },
+    'size-of-life': {
+        name: 'Size of Life',
+        url: 'https://neal.fun/size-of-life/',
+        newTab: true,
+        description: 'Compare the sizes of living things!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/size-of-life.svg',
+        category: 'educational',
+        plays: 145000
+    },
+    'not-a-robot': {
+        name: 'Not a Robot',
+        url: 'https://neal.fun/not-a-robot/',
+        newTab: true,
+        description: 'Prove you are not a robot!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/not-a-robot.svg',
+        category: 'puzzle',
+        plays: 178000
+    },
+    'internet-artifacts': {
+        name: 'Internet Artifacts',
+        url: 'https://neal.fun/internet-artifacts/',
+        newTab: true,
+        description: 'Explore historic internet artifacts!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/internet-artifacts.svg',
+        category: 'educational',
+        plays: 234000
+    },
+    'wonders-of-street-view': {
+        name: 'Wonders of Street View',
+        url: 'https://neal.fun/wonders-of-street-view/',
+        newTab: true,
+        description: 'Discover amazing places on Street View!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/wonders-of-street-view.svg',
+        category: 'educational',
+        plays: 189000
+    },
+    'days-since-incident': {
+        name: 'Days Since Incident',
+        url: 'https://neal.fun/days-since-incident/',
+        newTab: true,
+        description: 'Track days since various incidents!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/days-since-incident.svg',
+        category: 'casual',
+        plays: 98000
+    },
+    'share-this-page': {
+        name: 'Share This Page',
+        url: 'https://neal.fun/share-this-page/',
+        newTab: true,
+        description: 'An overwhelming number of share buttons!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/share-this-page.svg',
+        category: 'casual',
+        plays: 76000
+    },
+    'where-does-the-day-go': {
+        name: 'Where Does the Day Go',
+        url: 'https://neal.fun/where-does-the-day-go/',
+        newTab: true,
+        description: 'See how people spend their time!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/where-does-the-day-go.svg',
+        category: 'educational',
+        plays: 134000
+    },
+    'life-checklist': {
+        name: 'Life Checklist',
+        url: 'https://neal.fun/life-checklist/',
+        newTab: true,
+        description: 'Check off life experiences!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/life-checklist.svg',
+        category: 'casual',
+        plays: 156000
+    },
+    'speed': {
+        name: 'Speed',
+        url: 'https://neal.fun/speed/',
+        newTab: true,
+        description: 'Compare the speeds of things!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/speed.svg',
+        category: 'educational',
+        plays: 112000
+    },
+    'paper': {
+        name: 'Paper',
+        url: 'https://neal.fun/paper/',
+        newTab: true,
+        description: 'Fold paper as many times as you can!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/paper.svg',
+        category: 'simulation',
+        plays: 145000
+    },
+    'logos-from-memory': {
+        name: 'Logos From Memory',
+        url: 'https://neal.fun/logos-from-memory/',
+        newTab: true,
+        description: 'Draw famous logos from memory!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/logos-from-memory.svg',
+        category: 'trivia',
+        plays: 178000
+    },
+    'progress': {
+        name: 'Progress',
+        url: 'https://neal.fun/progress/',
+        newTab: true,
+        description: 'Watch progress bars fill up!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/progress.svg',
+        category: 'casual',
+        plays: 98000
+    },
+    'baby-map': {
+        name: 'Baby Map',
+        url: 'https://neal.fun/baby-map/',
+        newTab: true,
+        description: 'See babies being born around the world!',
+        touchscreen: true,
+        image: 'https://neal.fun/link-images/baby-map.svg',
+        category: 'simulation',
+        plays: 134000
+    },
+    
+    'jetpack-joyride': {
+        name: 'Jetpack Joyride',
+        url: 'https://abinbins.github.io/a7/jetpack-joyride/',
+        description: 'Endless jetpack flying fun!',
+        touchscreen: true,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/jetpack-joyride.png',
+        category: 'arcade',
+        plays: 156000
+    },
+    'football-legends': {
+        name: 'Football Legends',
+        url: 'https://footballlegends-online.github.io/file/',
+        description: 'American football action!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/football-legends.png',
+        category: 'sports',
+        plays: 112000
+    },
+    'poly-track': {
+        name: 'Poly Track',
+        url: 'https://polytrack-online.github.io/file/',
+        description: 'Build and race on custom tracks!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/poly-track.png',
+        category: 'racing',
+        plays: 98000
+    },
+    'crossy-road': {
+        name: 'Crossy Road',
+        url: 'https://genizymath.github.io/iframe/24.html',
+        description: 'Why did the chicken cross the road?',
+        touchscreen: true,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/crossy-road.png',
+        category: 'arcade',
+        plays: 145000
+    },
+    'tomb-of-the-mask': {
+        name: 'Tomb of the Mask',
+        url: 'https://genizymath.github.io/iframe/109.html',
+        description: 'Retro maze adventure!',
+        touchscreen: true,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/tomb-of-the-mask.png',
+        category: 'arcade',
+        plays: 123000
+    },
+    'run-3': {
+        name: 'Run 3',
+        url: 'https://ubgwtf.gitlab.io/run-3/',
+        description: 'Run through space tunnels!',
+        touchscreen: false,
+        image: 'https://newunblockedgames.gitlab.io/assets/thumb/run-3.png',
+        category: 'arcade',
+        plays: 198000
     }
 };
 
@@ -812,20 +1896,20 @@ const GAMES = {
 // CATEGORY DEFINITIONS
 // ============================================
 const CATEGORIES = {
-    all: { name: 'All Games', icon: '🎮', color: '#6366f1' },
-    featured: { name: 'Featured', icon: '⭐', color: '#f59e0b' },
-    favorites: { name: 'Favorites', icon: '❤️', color: '#ef4444' },
-    rhythm: { name: 'Rhythm', icon: '🎵', color: '#8b5cf6' },
-    horror: { name: 'Horror', icon: '👻', color: '#dc2626' },
-    action: { name: 'Action', icon: '💥', color: '#f97316' },
-    arcade: { name: 'Arcade', icon: '🕹️', color: '#22c55e' },
-    racing: { name: 'Racing', icon: '🏎️', color: '#3b82f6' },
-    sports: { name: 'Sports', icon: '⚽', color: '#10b981' },
-    puzzle: { name: 'Puzzle', icon: '🧩', color: '#6366f1' },
-    multiplayer: { name: 'Multiplayer', icon: '👥', color: '#ec4899' },
-    fighting: { name: 'Fighting', icon: '🥊', color: '#ef4444' },
-    adventure: { name: 'Adventure', icon: '🗺️', color: '#14b8a6' },
-    casual: { name: 'Casual', icon: '🎈', color: '#a855f7' }
+    all: { name: 'All Games', icon: '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4-3c-.83 0-1.5-.67-1.5-1.5S18.67 9 19.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>', color: '#6366f1' },
+    featured: { name: 'Featured', icon: '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>', color: '#f59e0b' },
+    favorites: { name: 'Favorites', icon: '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>', color: '#ef4444' },
+    rhythm: { name: 'Rhythm', icon: '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>', color: '#8b5cf6' },
+    horror: { name: 'Horror', icon: '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2C7.03 2 3 6.03 3 11c0 2.96 1.46 5.59 3.7 7.21L6 21l3-1c.96.32 2 .5 3 .5s2.04-.18 3-.5l3 1-.7-2.79C20.54 16.59 22 13.96 22 11c0-4.97-4.03-9-10-9zM9 12c-.83 0-1.5-.67-1.5-1.5S8.17 9 9 9s1.5.67 1.5 1.5S9.83 12 9 12zm6 0c-.83 0-1.5-.67-1.5-1.5S14.17 9 15 9s1.5.67 1.5 1.5S15.83 12 15 12z"/></svg>', color: '#dc2626' },
+    action: { name: 'Action', icon: '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M7 5h10v2h2V3c0-1.1-.9-2-2-2H7c-1.1 0-2 .9-2 2v4h2V5zm8.41 11.59L20 12l-4.59-4.59L14 8.83 17.17 12 14 15.17l1.41 1.42zM10 15.17L6.83 12 10 8.83 8.59 7.41 4 12l4.59 4.59L10 15.17zM17 19H7v-2H5v4c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-4h-2v2z"/></svg>', color: '#f97316' },
+    arcade: { name: 'Arcade', icon: '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4-3c-.83 0-1.5-.67-1.5-1.5S18.67 9 19.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>', color: '#22c55e' },
+    racing: { name: 'Racing', icon: '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>', color: '#3b82f6' },
+    sports: { name: 'Sports', icon: '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 2.07c2.52.41 4.65 2.04 5.69 4.29L14 10.52V4.07zM8 5.08l3 1.5V10l-4-2 .03-.03C7.53 6.8 8 5.97 8 5.08zM5.52 14l2.81-1.41L12 15v4.93c-3.24-.5-5.82-2.86-6.48-5.93zM13 19.93V15l3.67-2.44 2.81 1.41c-.66 3.07-3.24 5.43-6.48 5.96zm5.31-7.17l-3.67-2.2 4.55-2.27c.49 1.37.78 2.85.78 4.41 0 .03-.01.05-.01.08l-1.65-.02z"/></svg>', color: '#10b981' },
+    puzzle: { name: 'Puzzle', icon: '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7s2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z"/></svg>', color: '#6366f1' },
+    multiplayer: { name: 'Multiplayer', icon: '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>', color: '#ec4899' },
+    fighting: { name: 'Fighting', icon: '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M7 5h2V3H7v2zm0 8h2v-2H7v2zm0 8h2v-2H7v2zm4-4h2v-2h-2v2zm0 4h2v-2h-2v2zm-8 0h2v-2H3v2zm0-4h2v-2H3v2zm0-4h2v-2H3v2zm0-4h2V7H3v2zm0-4h2V3H3v2zm8 8h2v-2h-2v2zm8 4h2v-2h-2v2zm0-4h2v-2h-2v2zm0 8h2v-2h-2v2zm0-12h2V7h-2v2zm-8 0h2V7h-2v2zm8-6v2h2V3h-2zm-8 2h2V3h-2v2zm4 16h2v-2h-2v2zm0-8h2v-2h-2v2zm0-8h2V3h-2v2z"/></svg>', color: '#ef4444' },
+    adventure: { name: 'Adventure', icon: '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>', color: '#14b8a6' },
+    casual: { name: 'Casual', icon: '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>', color: '#a855f7' }
 };
 
 // ============================================
@@ -834,10 +1918,22 @@ const CATEGORIES = {
 let currentFilter = 'all';
 let currentSort = 'popular';
 let searchQuery = '';
-let favorites = JSON.parse(localStorage.getItem('gemtraFavorites')) || [];
-let recentlyPlayed = JSON.parse(localStorage.getItem('gemtraRecent')) || [];
+let favorites = safeParseJSON(localStorage.getItem('gemtraFavorites'), []);
+let recentlyPlayed = safeParseJSON(localStorage.getItem('gemtraRecent'), []);
 let currentGame = null;
 let viewMode = localStorage.getItem('gemtraViewMode') || 'grid';
+
+// Safe JSON parse utility
+function safeParseJSON(str, fallback = null) {
+    if (!str) return fallback;
+    try {
+        const parsed = JSON.parse(str);
+        return parsed !== null ? parsed : fallback;
+    } catch (e) {
+        console.warn('Failed to parse JSON from storage:', e);
+        return fallback;
+    }
+}
 let firebaseInitialized = false;
 let realtimePlayCounts = {}; // Store real-time play counts from Firebase
 let ticketNotificationListener = null; // Listener for ticket updates
@@ -852,7 +1948,7 @@ function initializeFirebase() {
         try {
             setupFirebaseListeners();
             firebaseInitialized = true;
-            console.log('🔥 Firebase initialized!');
+            console.log('Firebase initialized!');
         } catch (error) {
             console.warn('Firebase initialization failed:', error);
             firebaseInitialized = false;
@@ -935,14 +2031,21 @@ function updateSiteStats(stats) {
     }
 }
 
+// Global presence interval for cleanup
+let _presenceInterval = null;
+
 // Track user presence (online status)
 async function setupPresence() {
+    // Clean up any existing interval first
+    if (_presenceInterval) {
+        clearInterval(_presenceInterval);
+        _presenceInterval = null;
+    }
+    
     if (!window.firebaseDB || !window.firebaseRef || !window.firebaseSet || !window.firebaseOnValue) {
         console.warn('Firebase presence dependencies not available');
         return;
     }
-
-    let presenceInterval = null;
 
     try {
         // Generate unique session ID
@@ -1000,7 +2103,7 @@ async function setupPresence() {
         });
 
         // Update presence every 2 minutes to keep alive
-        presenceInterval = setInterval(async () => {
+        _presenceInterval = setInterval(async () => {
             try {
                 await window.firebaseSet(presenceRef, {
                     online: true,
@@ -1014,17 +2117,19 @@ async function setupPresence() {
 
         // Clean up on page unload
         window.addEventListener('beforeunload', () => {
-            if (presenceInterval) {
-                clearInterval(presenceInterval);
+            if (_presenceInterval) {
+                clearInterval(_presenceInterval);
+                _presenceInterval = null;
             }
         });
 
-        console.log('👤 Presence tracking active');
+        console.log('Presence tracking active');
     } catch (error) {
         console.warn('Presence setup error:', error);
         // Clean up interval if setup failed
-        if (presenceInterval) {
-            clearInterval(presenceInterval);
+        if (_presenceInterval) {
+            clearInterval(_presenceInterval);
+            _presenceInterval = null;
         }
     }
 }
@@ -1060,7 +2165,7 @@ async function incrementPlayCount(gameKey) {
             }
         }
 
-        console.log(`🎮 Play counted for: ${gameKey}`);
+        console.log(`Play counted for: ${gameKey}`);
     } catch (error) {
         console.warn('Firebase play count error:', error);
         // Continue silently - play count is not critical for user experience
@@ -1085,6 +2190,108 @@ let elements = {};
 // ============================================
 // Track page load start time for minimum loading duration
 window.pageLoadStartTime = Date.now();
+
+// ============================================
+// FAST MODE - Performance Optimization
+// ============================================
+const FastMode = {
+    // Check if device is likely low-end
+    isLowEndDevice() {
+        // Check for older/slower devices
+        const memoryGiB = navigator.deviceMemory || 4;
+        const cores = navigator.hardwareConcurrency || 4;
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        // Consider low-end if: less than 4GB RAM, less than 4 cores, or mobile device
+        return memoryGiB < 4 || cores < 4 || isMobile;
+    },
+    
+    // Check if browser is Safari
+    isSafari() {
+        const ua = navigator.userAgent;
+        return /^((?!chrome|android).)*safari/i.test(ua) && !/CriOS|FxiOS/.test(ua);
+    },
+    
+    // Check if device is iPad
+    isIPad() {
+        return /iPad/i.test(navigator.userAgent) || 
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    },
+    
+    // Should show the fast mode prompt
+    shouldPrompt() {
+        // Don't prompt if user already made a choice
+        const savedChoice = localStorage.getItem('fastModeChoice');
+        if (savedChoice !== null) return false;
+        
+        // Prompt for Safari, iPad, or low-end devices
+        return this.isSafari() || this.isIPad() || this.isLowEndDevice();
+    },
+    
+    // Enable fast mode
+    enable() {
+        document.body.classList.add('fast-mode');
+        localStorage.setItem('fastMode', 'true');
+        console.log('⚡ Fast Mode enabled');
+    },
+    
+    // Disable fast mode
+    disable() {
+        document.body.classList.remove('fast-mode');
+        localStorage.setItem('fastMode', 'false');
+    },
+    
+    // Load saved preference
+    loadSavedPreference() {
+        const saved = localStorage.getItem('fastMode');
+        if (saved === 'true') {
+            this.enable();
+        }
+    },
+    
+    // Show the fast mode modal
+    showModal() {
+        const modal = document.getElementById('fastModeModal');
+        if (modal) {
+            modal.classList.add('active');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+    },
+    
+    // Hide the fast mode modal
+    hideModal() {
+        const modal = document.getElementById('fastModeModal');
+        if (modal) {
+            modal.classList.remove('active');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+    }
+};
+
+// Global functions for HTML onclick handlers
+function enableFastMode() {
+    const rememberChoice = document.getElementById('fastModeRemember')?.checked;
+    FastMode.enable();
+    
+    if (rememberChoice) {
+        localStorage.setItem('fastModeChoice', 'enabled');
+    }
+    
+    FastMode.hideModal();
+    showToast('⚡ Fast Mode enabled! Enjoy smoother performance.', 'success');
+}
+
+function closeFastModeModal() {
+    const rememberChoice = document.getElementById('fastModeRemember')?.checked;
+    
+    if (rememberChoice) {
+        localStorage.setItem('fastModeChoice', 'disabled');
+    }
+    
+    FastMode.hideModal();
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     // Keep scroll locked at top during initialization
@@ -1127,12 +2334,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initializeApp() {
+    // Load Fast Mode preference first
+    FastMode.loadSavedPreference();
+    
     // Initialize Firebase if ready, or wait for it
     if (window.firebaseReady) {
         initializeFirebase();
     } else {
-        window.addEventListener('firebaseReady', initializeFirebase);
+        window.addEventListener('firebaseReady', initializeFirebase, { once: true });
     }
+
+    // Initialize auth (user menu, auth state listeners)
+    initializeAuth();
 
     // Initialize all features
     renderGames();
@@ -1175,7 +2388,7 @@ function initializeApp() {
         });
     }, remainingTime);
 
-    console.log('🎮 Gemtra Games initialized successfully!');
+    console.log('Gemtra Games initialized successfully!');
 }
 
 // ============================================
@@ -1206,10 +2419,20 @@ function hideLoadingScreen() {
         // Remove loader from DOM after animation
         setTimeout(() => {
             loader.style.display = 'none';
+            
+            // Check if we should show Fast Mode prompt (after loading is done)
+            if (FastMode.shouldPrompt()) {
+                setTimeout(() => FastMode.showModal(), 500);
+            }
         }, 600);
     } else {
         // If no loader, just enable content
         html.classList.remove('loading');
+        
+        // Check Fast Mode for no-loader case
+        if (FastMode.shouldPrompt()) {
+            setTimeout(() => FastMode.showModal(), 500);
+        }
     }
 }
 
@@ -1228,7 +2451,7 @@ function renderGames() {
         const searchTerm = searchQuery || '';
         elements.gamesGrid.innerHTML = `
             <div class="no-results">
-                <div class="no-results-icon">🔍</div>
+                <div class="no-results-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="64" height="64"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></div>
                 <h3>No games found${searchTerm ? ` for "${searchTerm}"` : ''}</h3>
                 <p>We don't have what you're looking for yet - but you can request it!</p>
                 <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 16px;">
@@ -1266,11 +2489,14 @@ function createGameCard(key, game, index) {
     const categoryInfo = CATEGORIES[game.category] || CATEGORIES.casual;
     const playCount = getPlayCount(key); // Use Firebase play count if available
 
+    const escapedName = game.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    // Use proxy for images from blocked domains
+    const imageUrl = getProxiedImageUrl(game.image);
     card.innerHTML = `
         <div class="card-image-wrapper">
-            <img class="card-image" src="${game.image}" alt="${game.name}" loading="lazy" onerror="handleImageError(this, '${game.name}')">
+            <img class="card-image" src="${imageUrl}" alt="${escapedName}" loading="lazy" decoding="async" onerror="handleImageError(this, '${escapedName}')">
             <div class="card-overlay">
-                <button class="play-btn" aria-label="Play ${game.name}">
+                <button class="play-btn" aria-label="Play ${escapedName}">
                     <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M8 5v14l11-7z"/>
                     </svg>
@@ -1281,7 +2507,7 @@ function createGameCard(key, game, index) {
                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
             </button>
-            ${game.featured ? '<span class="featured-badge">⭐ Featured</span>' : ''}
+            ${game.featured ? '<span class="featured-badge"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12" style="vertical-align:middle;margin-right:3px"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>Featured</span>' : ''}
         </div>
         <div class="card-content">
             <span class="card-category" style="--category-color: ${categoryInfo.color}">
@@ -1298,7 +2524,7 @@ function createGameCard(key, game, index) {
                     ${formatNumber(playCount)}
                 </span>
                 <span class="card-touch ${game.touchscreen ? 'supported' : ''}">
-                    ${game.touchscreen ? '📱 Touch' : '🖥️ Desktop'}
+                    ${game.touchscreen ? '<svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12" style="vertical-align:middle"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg> Touch' : '<svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12" style="vertical-align:middle"><path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7l-2 3v1h8v-1l-2-3h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 12H3V4h18v10z"/></svg> Desktop'}
                 </span>
             </div>
         </div>
@@ -1326,12 +2552,47 @@ function createGameCard(key, game, index) {
     return card;
 }
 
+// Category-based fallback images (reliable, fast-loading)
+const CATEGORY_FALLBACK_IMAGES = {
+    rhythm: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" fill="%236366f1"%3E%3Crect width="200" height="150" fill="%231a1a25"/%3E%3Cpath d="M100 30v60c-5-3-11-5-18-5-15 0-27 12-27 27s12 27 27 27 27-12 27-27V50h27V30h-36z" fill="%236366f1"/%3E%3C/svg%3E',
+    horror: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" fill="%23ef4444"%3E%3Crect width="200" height="150" fill="%231a1a25"/%3E%3Cpath d="M100 20c-33 0-60 27-60 60s27 60 60 60 60-27 60-60-27-60-60-60zm-20 80l10-17 10 17H80zm-17-27a10 10 0 110-20 10 10 0 010 20zm74 0a10 10 0 110-20 10 10 0 010 20z" fill="%23ef4444"/%3E%3C/svg%3E',
+    action: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" fill="%23f59e0b"%3E%3Crect width="200" height="150" fill="%231a1a25"/%3E%3Cpath d="M130 35H70c-8 0-15 7-15 15v15h90V50c0-8-7-15-15-15zm-30 45l20 35H80l20-35zm-40 35v-35h-5l-10-10v55h25v-10H60zm80 0v10h25V70l-10 10h-5v35h-10z" fill="%23f59e0b"/%3E%3C/svg%3E',
+    racing: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" fill="%2310b981"%3E%3Crect width="200" height="150" fill="%231a1a25"/%3E%3Cpath d="M155 55c-2-5-7-8-12-8H57c-5 0-10 3-12 8L30 90v50c0 4 3 7 7 7h7c4 0 7-3 7-7v-7h98v7c0 4 3 7 7 7h7c4 0 7-3 7-7V90l-15-35zM57 110c-6 0-10-5-10-10s4-10 10-10 10 5 10 10-4 10-10 10zm86 0c-6 0-10-5-10-10s4-10 10-10 10 5 10 10-4 10-10 10zM40 80l10-30h100l10 30H40z" fill="%2310b981"/%3E%3C/svg%3E',
+    arcade: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" fill="%23ec4899"%3E%3Crect width="200" height="150" fill="%231a1a25"/%3E%3Cpath d="M160 40H40c-8 0-15 7-15 15v55c0 8 7 15 15 15h120c8 0 15-7 15-15V55c0-8-7-15-15-15zM85 95H65v15H55V95H35V85h20V70h10v15h20v10zm30 10c-5 0-10-5-10-10s5-10 10-10 10 5 10 10-5 10-10 10zm27-20c-5 0-10-5-10-10s5-10 10-10 10 5 10 10-5 10-10 10z" fill="%23ec4899"/%3E%3C/svg%3E',
+    adventure: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" fill="%2306b6d4"%3E%3Crect width="200" height="150" fill="%231a1a25"/%3E%3Cpath d="M100 15c-25 0-45 20-45 45 0 34 45 85 45 85s45-51 45-85c0-25-20-45-45-45zm0 61c-9 0-16-7-16-16s7-16 16-16 16 7 16 16-7 16-16 16z" fill="%2306b6d4"/%3E%3C/svg%3E',
+    puzzle: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" fill="%238b5cf6"%3E%3Crect width="200" height="150" fill="%231a1a25"/%3E%3Cpath d="M145 70h-10V50c0-8-7-15-15-15h-15v-8c0-10-8-18-18-18s-18 8-18 18v8H55c-8 0-15 7-15 15v25h8c10 0 18 8 18 18s-8 18-18 18h-8v20c0 8 7 15 15 15h25v-8c0-10 8-18 18-18s18 8 18 18v8h20c8 0 15-7 15-15v-15h8c10 0 18-8 18-18s-8-18-18-18z" fill="%238b5cf6"/%3E%3C/svg%3E',
+    multiplayer: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" fill="%23f472b6"%3E%3Crect width="200" height="150" fill="%231a1a25"/%3E%3Ccircle cx="130" cy="50" r="20" fill="%23f472b6"/%3E%3Ccircle cx="70" cy="50" r="20" fill="%23f472b6"/%3E%3Cpath d="M70 80c-17 0-50 8-50 25v15h100v-15c0-17-33-25-50-25zm60 0c-2 0-4 0-7 1 8 6 14 14 14 24v15h43v-15c0-17-33-25-50-25z" fill="%23f472b6"/%3E%3C/svg%3E',
+    fighting: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" fill="%23ef4444"%3E%3Crect width="200" height="150" fill="%231a1a25"/%3E%3Cpath d="M150 25H50c-4 0-8 4-8 8v11c0 7 4 13 10 15L80 70v55h10V70l30-11c6-2 10-8 10-15V33c0-4-4-8-8-8zM70 50l-14-7V33h14v17zm25 0l-14-7V33h28v10l-14 7zm39-7l-14 7V33h14v10z" fill="%23ef4444"/%3E%3C/svg%3E',
+    sports: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" fill="%2322c55e"%3E%3Crect width="200" height="150" fill="%231a1a25"/%3E%3Ccircle cx="100" cy="75" r="50" fill="none" stroke="%2322c55e" stroke-width="8"/%3E%3Cpath d="M100 25v100M50 75h100" stroke="%2322c55e" stroke-width="4"/%3E%3C/svg%3E',
+    casual: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" fill="%23fbbf24"%3E%3Crect width="200" height="150" fill="%231a1a25"/%3E%3Ccircle cx="100" cy="75" r="50" fill="%23fbbf24"/%3E%3Ccircle cx="80" cy="60" r="8" fill="%231a1a25"/%3E%3Ccircle cx="120" cy="60" r="8" fill="%231a1a25"/%3E%3Cpath d="M70 90c15 20 45 20 60 0" fill="none" stroke="%231a1a25" stroke-width="5" stroke-linecap="round"/%3E%3C/svg%3E'
+};
+
 function handleImageError(img, gameName) {
-    img.style.display = 'none';
-    const placeholder = document.createElement('div');
-    placeholder.className = 'card-image card-image-placeholder';
-    placeholder.innerHTML = `<span class="placeholder-letter">${gameName.charAt(0).toUpperCase()}</span>`;
-    img.parentNode.insertBefore(placeholder, img);
+    // Get the original source (before any proxy attempts)
+    const currentSrc = img.src;
+    
+    // Check if this is already a proxy URL or a data URI (fallback)
+    const isProxyUrl = currentSrc.includes('gemtra-proxy') || currentSrc.includes('/img/');
+    const isDataUri = currentSrc.startsWith('data:');
+    
+    // If direct load failed and we haven't tried proxy yet
+    if (!isProxyUrl && !isDataUri && !img.dataset.proxyTried) {
+        img.dataset.proxyTried = 'true';
+        img.dataset.originalSrc = currentSrc; // Save original URL
+        const proxiedSrc = `${PROXY_URL}/img/${encodeURIComponent(currentSrc)}`;
+        img.src = proxiedSrc;
+        return; // Give proxy a chance
+    }
+    
+    // Proxy also failed (or was already a proxy URL), use category fallback
+    const card = img.closest('.game-card');
+    const category = card?.dataset?.category || 'arcade';
+    const fallbackImg = CATEGORY_FALLBACK_IMAGES[category] || CATEGORY_FALLBACK_IMAGES.arcade;
+    
+    // Use SVG fallback image
+    img.src = fallbackImg;
+    img.dataset.fallbackUsed = 'true';
+    img.style.objectFit = 'cover';
 }
 
 // ============================================
@@ -1344,6 +2605,7 @@ function getFilteredGames() {
     if (searchQuery) {
         const query = searchQuery.toLowerCase();
         games = games.filter(([key, game]) => 
+            key.toLowerCase().includes(query) ||
             game.name.toLowerCase().includes(query) ||
             game.description.toLowerCase().includes(query) ||
             game.category.toLowerCase().includes(query)
@@ -1538,111 +2800,118 @@ function initializeModal() {
         elements.modalRestart.addEventListener('click', restartGame);
     }
 
-    // Close on escape key
+    // Track last escape press for double-escape to exit
+    let lastEscapeTime = 0;
+    
+    // Close on escape key (double-tap Escape when iframe is focused to exit)
     document.addEventListener('keydown', (e) => {
+        // Skip if user is actively in the game iframe
+        const isIframeFocused = document.activeElement === elements.gameIframe;
+        
         if (e.key === 'Escape' && elements.gameModal?.classList.contains('active')) {
-            closeGame();
+            if (isIframeFocused) {
+                // If iframe is focused, only close on double-escape (within 500ms)
+                const now = Date.now();
+                if (now - lastEscapeTime < 500) {
+                    closeGame();
+                    lastEscapeTime = 0;
+                } else {
+                    lastEscapeTime = now;
+                    // Let the game handle the first escape
+                }
+            } else {
+                // If iframe not focused, close immediately
+                closeGame();
+            }
         }
-        // Fullscreen on F key
-        if (e.key === 'f' && elements.gameModal?.classList.contains('active')) {
-            toggleFullscreen();
-        }
-        // Restart on R key
-        if (e.key === 'r' && elements.gameModal?.classList.contains('active')) {
-            restartGame();
+        // Only trigger F and R shortcuts if iframe isn't focused (so game can use these keys)
+        if (!isIframeFocused) {
+            // Fullscreen on F key
+            if (e.key === 'f' && elements.gameModal?.classList.contains('active')) {
+                toggleFullscreen();
+            }
+            // Restart on R key
+            if (e.key === 'r' && elements.gameModal?.classList.contains('active')) {
+                restartGame();
+            }
         }
     });
 }
 
 function openGame(gameKey) {
-    ProxyLogger.header(`Opening Game: ${gameKey}`);
-    const startTime = performance.now();
-    
     const game = GAMES[gameKey];
-    if (!game) {
-        ProxyLogger.error(`Game not found in database: ${gameKey}`);
-        ProxyLogger.verbose('Available games:', Object.keys(GAMES));
+    if (!game) return;
+
+    // Handle games that need to open in new tab (like neal.fun)
+    if (game.newTab) {
+        window.open(game.url, '_blank');
+        // Still track play count
+        incrementPlayCount(gameKey);
+        addToRecentlyPlayed(gameKey);
+        showToast(`Opening ${game.name} in new tab`, 'success');
         return;
     }
 
-    ProxyLogger.group('Game Details');
-    ProxyLogger.table('Game Info', {
-        key: gameKey,
-        name: game.name,
-        originalUrl: game.url,
-        category: game.category,
-        touchscreen: game.touchscreen,
-        featured: game.featured || false
-    });
-    ProxyLogger.groupEnd();
+    // NAVIGATE TO DEDICATED GAME PAGE (better performance, especially on iPad)
+    // Build the play page URL with game info as query params
+    const playUrl = new URL('play.html', window.location.href);
+    playUrl.searchParams.set('game', gameKey);
+    playUrl.searchParams.set('url', game.url);
+    playUrl.searchParams.set('name', game.name);
+    playUrl.searchParams.set('touch', game.touchscreen ? 'true' : 'false');
+    
+    // Track before navigating
+    incrementPlayCount(gameKey);
+    addToRecentlyPlayed(gameKey);
+    
+    // Navigate to the dedicated game page
+    window.location.href = playUrl.toString();
+    return;
 
+    // === OLD MODAL CODE (KEPT FOR REFERENCE) ===
+    /*
     currentGame = gameKey;
 
-    // Build the URL (with or without proxy)
-    const originalUrl = game.url;
-    const finalUrl = buildProxyUrl(originalUrl);
-    
-    ProxyLogger.group('URL Processing');
-    ProxyLogger.info('Original URL:', originalUrl);
-    ProxyLogger.info('Final URL:', finalUrl);
-    ProxyLogger.info('Using Proxy:', finalUrl !== originalUrl);
-    ProxyLogger.groupEnd();
-
     // Update modal
-    if (elements.modalTitle) {
-        elements.modalTitle.textContent = game.name;
-        ProxyLogger.verbose('Modal title updated');
-    }
-    
-    if (elements.gameIframe) {
-        ProxyLogger.group('Loading Game in IFrame');
-        ProxyLogger.debug('IFrame element found:', elements.gameIframe);
-        ProxyLogger.debug('Current IFrame src:', elements.gameIframe.src);
-        ProxyLogger.info('Setting new src:', finalUrl);
-        
-        // Add load event listeners for detailed logging
-        const loadStartTime = performance.now();
-        
-        const onLoad = () => {
-            const loadDuration = Math.round(performance.now() - loadStartTime);
-            ProxyLogger.success(`IFrame loaded successfully in ${loadDuration}ms`);
-            ProxyLogger.iframe('LOAD_COMPLETE', { url: finalUrl, duration: loadDuration });
-            elements.gameIframe.removeEventListener('load', onLoad);
-        };
-        
-        const onError = (e) => {
-            const loadDuration = Math.round(performance.now() - loadStartTime);
-            ProxyLogger.error(`IFrame load FAILED after ${loadDuration}ms`);
-            ProxyLogger.iframe('LOAD_ERROR', { url: finalUrl, duration: loadDuration, error: e });
-            ProxyLogger.verbose('Error event:', e);
-            elements.gameIframe.removeEventListener('error', onError);
-        };
-        
-        elements.gameIframe.addEventListener('load', onLoad);
-        elements.gameIframe.addEventListener('error', onError);
-        
-        // Set the src
-        elements.gameIframe.src = finalUrl;
-        ProxyLogger.debug('IFrame src set, waiting for load...');
-        ProxyLogger.groupEnd();
-    } else {
-        ProxyLogger.error('gameIframe element not found!');
-    }
+    if (elements.modalTitle) elements.modalTitle.textContent = game.name;
+    // Use proxy for blocked domains
+    if (elements.gameIframe) elements.gameIframe.src = getProxiedGameUrl(game.url);
 
     // Show modal
     if (elements.gameModal) {
         elements.gameModal.classList.add('active');
         document.body.style.overflow = 'hidden';
-        ProxyLogger.verbose('Modal activated');
-    } else {
-        ProxyLogger.warn('gameModal element not found');
     }
+
+    // PERFORMANCE: Hide page sections (not main, since modal is inside main)
+    const header = document.querySelector('header');
+    const footer = document.querySelector('footer');
+    const hero = document.querySelector('.hero');
+    const featured = document.querySelector('.featured-section');
+    const filter = document.querySelector('.filter-section');
+    const gamesSection = document.querySelector('.games-section');
+    if (header) header.style.display = 'none';
+    if (footer) footer.style.display = 'none';
+    if (hero) hero.style.display = 'none';
+    if (featured) featured.style.display = 'none';
+    if (filter) filter.style.display = 'none';
+    if (gamesSection) gamesSection.style.display = 'none';
+
+    // Focus the iframe so keyboard events go to the game
+    // Use preventScroll to avoid scrolling to bottom
+    setTimeout(() => {
+        if (elements.gameIframe) {
+            elements.gameIframe.focus({ preventScroll: true });
+            window.scrollTo(0, 0);
+        }
+    }, 100);
 
     // Update favorite button
     updateModalFavoriteButton();
 
     // Add to recently played
     addToRecentlyPlayed(gameKey);
+    */
 
     // Increment play count in Firebase (real-time!)
     incrementPlayCount(gameKey);
@@ -1674,6 +2943,20 @@ function closeGame() {
         elements.gameModal.classList.remove('active');
         document.body.style.overflow = '';
     }
+
+    // PERFORMANCE: Restore page sections visibility
+    const header = document.querySelector('header');
+    const footer = document.querySelector('footer');
+    const hero = document.querySelector('.hero');
+    const featured = document.querySelector('.featured-section');
+    const filter = document.querySelector('.filter-section');
+    const gamesSection = document.querySelector('.games-section');
+    if (header) header.style.display = '';
+    if (footer) footer.style.display = '';
+    if (hero) hero.style.display = '';
+    if (featured) featured.style.display = '';
+    if (filter) filter.style.display = '';
+    if (gamesSection) gamesSection.style.display = '';
 
     currentGame = null;
 
@@ -1871,6 +3154,16 @@ function updateGameCountDisplay(count) {
     if (elements.gameCountDisplay) {
         elements.gameCountDisplay.textContent = `(${count})`;
     }
+    // Also update the hero stat games counter
+    const statGamesEl = document.getElementById('statGames');
+    if (statGamesEl) {
+        statGamesEl.textContent = count;
+    }
+    // Update the hero badge count too
+    const heroBadgeCountEl = document.getElementById('heroBadgeCount');
+    if (heroBadgeCountEl) {
+        heroBadgeCountEl.textContent = count;
+    }
 }
 
 // ============================================
@@ -1885,7 +3178,7 @@ function updateSectionTitle() {
     
     // Update the icon
     if (icon) {
-        icon.textContent = categoryInfo.icon;
+        icon.innerHTML = categoryInfo.icon;
     }
     
     // Find and update the text node between icon and count
@@ -1921,7 +3214,8 @@ function renderFeaturedGames() {
     
     elements.featuredGrid.innerHTML = '';
     
-    featuredGames.slice(0, 6).forEach(([key, game]) => {
+    // Show all featured games (no limit)
+    featuredGames.forEach(([key, game]) => {
         const card = createGameCard(key, game, 0);
         elements.featuredGrid.appendChild(card);
     });
@@ -1945,10 +3239,10 @@ function showToast(message, type = 'info', title = null) {
     toast.className = `toast toast-${type}`;
     
     const icons = {
-        success: '✓',
-        error: '✕',
-        info: 'ℹ',
-        warning: '⚠'
+        success: '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>',
+        error: '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>',
+        info: '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>',
+        warning: '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>'
     };
     
     const titles = {
@@ -1959,7 +3253,7 @@ function showToast(message, type = 'info', title = null) {
     };
 
     toast.innerHTML = `
-        <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+        <button class="toast-close">×</button>
         <div class="toast-header">
             <span class="toast-icon">${icons[type] || icons.info}</span>
             <div class="toast-content">
@@ -1970,6 +3264,23 @@ function showToast(message, type = 'info', title = null) {
     `;
 
     container.appendChild(toast);
+    
+    // Close button handler with proper cleanup
+    const closeBtn = toast.querySelector('.toast-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            if (toast._removeTimeout) {
+                clearTimeout(toast._removeTimeout);
+                toast._removeTimeout = null;
+            }
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.remove();
+                }
+            }, 300);
+        });
+    }
 
     // Trigger animation
     requestAnimationFrame(() => {
@@ -1978,6 +3289,7 @@ function showToast(message, type = 'info', title = null) {
 
     // Remove after delay
     const removeTimeout = setTimeout(() => {
+        toast._removeTimeout = null;
         toast.classList.remove('show');
         setTimeout(() => {
             if (toast.parentElement) {
@@ -2010,7 +3322,7 @@ function showConfirmToast(message, title, onConfirm, onCancel = null) {
     toast.innerHTML = `
         <button class="toast-close" onclick="this.parentElement.remove()">×</button>
         <div class="toast-header">
-            <span class="toast-icon">⚠</span>
+            <span class="toast-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg></span>
             <div class="toast-content">
                 <div class="toast-title">${escapeHtml(title)}</div>
                 <div class="toast-message">${escapeHtml(message)}</div>
@@ -2074,6 +3386,17 @@ function formatNumber(num) {
         return (num / 1000).toFixed(1) + 'K';
     }
     return num.toString();
+}
+
+// Validate URL is safe to render as link
+function isValidUrl(str) {
+    if (!str || typeof str !== 'string') return false;
+    try {
+        const url = new URL(str);
+        return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch (e) {
+        return false;
+    }
 }
 
 // ============================================
@@ -2200,7 +3523,7 @@ function getStatusText(status) {
     const statusLabels = {
         'pending': 'Pending Review',
         'in-progress': 'In Progress',
-        'completed': 'Completed! 🎉',
+        'completed': 'Completed!',
         'rejected': 'Rejected',
         'closed': 'Closed'
     };
@@ -2333,22 +3656,22 @@ function openRequestModal(type = 'game-request') {
 
     const configs = {
         'game-request': {
-            title: '🎮 Request a Game',
+            title: 'Request a Game',
             desc: "Let us know what game you'd like us to add!",
             showUrl: true
         },
         'bug-report': {
-            title: '🐛 Report a Bug',
+            title: 'Report a Bug',
             desc: 'Found something broken? Let us know!',
             showUrl: false
         },
         'suggestion': {
-            title: '💡 Make a Suggestion',
+            title: 'Make a Suggestion',
             desc: 'Have an idea to improve Gemtra? Share it!',
             showUrl: false
         },
         'feedback': {
-            title: '💬 Send Feedback',
+            title: 'Send Feedback',
             desc: 'Tell us what you think about Gemtra!',
             showUrl: false
         }
@@ -2477,13 +3800,20 @@ const AI_API_URL = 'https://gemtra-ai.modmojheh.workers.dev';
 let aiConversation = [
     {
         role: 'system',
-        content: `You are Gemtra AI, a helpful gaming assistant for Gemtra Games website. You help users find games, answer questions about the site, and provide game recommendations.
+        content: `You are Gemtra AI, a gaming assistant for Gemtra Games. Be brief and helpful.
 
-Available game categories: rhythm (Geometry Dash games), horror (FNAF games), action, racing, arcade, puzzle, multiplayer, fighting, adventure, casual, sports.
+GAMES WE HAVE:
+- FNAF: FNAF 1-4, Sister Location, FNAF 6, Ultimate Custom Night, FNAF World, FNAF Plus, Free Roam, Five Nights at Candy's
+- Horror: Backrooms, Granny, Baldi's Basics
+- Rhythm: Geometry Dash (main, Lite, Meltdown, SubZero, World)
+- Other: Minecraft 1.8.8, Pokemon Emerald, Slope, Subway Surfers, Run 3, Moto X3M, Stickman Hook, etc.
 
-Popular games include: Geometry Dash, FNAF series, Minecraft, Slope, Subway Surfers, various shooting and racing games.
+Categories: rhythm, horror, action, racing, arcade, puzzle, multiplayer, fighting, adventure, casual, sports.
 
-Be friendly, concise, and helpful. If users ask for games, suggest specific ones from our catalog. Keep responses under 150 words.`
+Rules:
+- Keep responses under 50 words
+- Suggest specific games
+- If asked about a game we don't have, say "We don't have that, but you can request it!"`
     }
 ];
 
@@ -2905,7 +4235,7 @@ async function loadRequestChat(ticketId) {
                         <span class="detail-label">Description:</span>
                         <span class="detail-value">${escapeHtml(ticket.description || 'No description')}</span>
                     </div>
-                    ${ticket.gameUrl ? `
+                    ${ticket.gameUrl && isValidUrl(ticket.gameUrl) ? `
                     <div class="detail-row">
                         <span class="detail-label">URL:</span>
                         <span class="detail-value"><a href="${escapeHtml(ticket.gameUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(ticket.gameUrl)}</a></span>
@@ -3160,7 +4490,7 @@ function addAIMessage(text, type) {
     msg.className = `ai-message ${type}`;
     
     msg.innerHTML = `
-        <div class="ai-avatar">${type === 'user' ? '👤' : '🤖'}</div>
+        <div class="ai-avatar">${type === 'user' ? '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>' : '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M20 9V7c0-1.1-.9-2-2-2h-3c0-1.66-1.34-3-3-3S9 3.34 9 5H6c-1.1 0-2 .9-2 2v2c-1.66 0-3 1.34-3 3s1.34 3 3 3v4c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-4c1.66 0 3-1.34 3-3s-1.34-3-3-3zM7.5 11.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5S9.83 13 9 13s-1.5-.67-1.5-1.5zM16 17H8v-2h8v2zm-1-4c-.83 0-1.5-.67-1.5-1.5S14.17 10 15 10s1.5.67 1.5 1.5S15.83 13 15 13z"/></svg>'}</div>
         <div class="ai-bubble">${escapeHTML(text)}</div>
     `;
 
@@ -3173,7 +4503,7 @@ function addTypingIndicator() {
     const typing = document.createElement('div');
     typing.className = 'ai-message bot';
     typing.innerHTML = `
-        <div class="ai-avatar">🤖</div>
+        <div class="ai-avatar"><svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M20 9V7c0-1.1-.9-2-2-2h-3c0-1.66-1.34-3-3-3S9 3.34 9 5H6c-1.1 0-2 .9-2 2v2c-1.66 0-3 1.34-3 3s1.34 3 3 3v4c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-4c1.66 0 3-1.34 3-3s-1.34-3-3-3zM7.5 11.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5S9.83 13 9 13s-1.5-.67-1.5-1.5zM16 17H8v-2h8v2zm-1-4c-.83 0-1.5-.67-1.5-1.5S14.17 10 15 10s1.5.67 1.5 1.5S15.83 13 15 13z"/></svg></div>
         <div class="ai-bubble">
             <div class="ai-typing">
                 <span></span>
@@ -3235,10 +4565,18 @@ function escapeHTML(text) {
 // KEYBOARD SHORTCUTS
 // ============================================
 document.addEventListener('keydown', (e) => {
-    // Focus search on /
-    if (e.key === '/' && document.activeElement !== elements.searchInput) {
+    // Focus search on / or Ctrl+K
+    const mainSearchInput = document.getElementById('mainSearchInput');
+    
+    if (e.key === '/' && document.activeElement !== mainSearchInput) {
         e.preventDefault();
-        elements.searchInput?.focus();
+        scrollToSearch();
+    }
+    
+    // Ctrl+K to scroll to search
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        scrollToSearch();
     }
 
     // Close modal on Escape
@@ -3254,10 +4592,6 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Initialize auth on load
-document.addEventListener('DOMContentLoaded', () => {
-    initializeAuth();
-});
 // Clear all filters function
 function clearAllFilters() {
     searchQuery = '';
@@ -3275,8 +4609,24 @@ function clearAllFilters() {
 }
 
 // ============================================
+// SCROLL TO SEARCH FUNCTION
+// ============================================
+function scrollToSearch() {
+    const mainSearch = document.getElementById('mainSearchInput');
+    if (mainSearch) {
+        // Scroll to the search section smoothly
+        mainSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Focus the input after scroll
+        setTimeout(() => {
+            mainSearch.focus();
+        }, 500);
+    }
+}
+
+// ============================================
 // EXPOSE FUNCTIONS GLOBALLY
 // ============================================
+window.scrollToSearch = scrollToSearch;
 window.handleImageError = handleImageError;
 window.openGame = openGame;
 window.closeGame = closeGame;
@@ -3384,16 +4734,16 @@ function openContactModal(type = 'support') {
     let content = '';
     
     if (type === 'dmca') {
-        title.textContent = '⚖️ DMCA / Copyright Notice';
+        title.textContent = 'DMCA / Copyright Notice';
         subtitle.textContent = 'How to submit a DMCA takedown request';
         content = `
             <div class="contact-section">
-                <h3>📋 Before You Submit</h3>
+                <h3>Before You Submit</h3>
                 <p>Gemtra Games is a <strong>game aggregator</strong> - we do not host game files directly. We embed games from third-party sources. If your content is being displayed without authorization, we will promptly remove it upon valid request.</p>
             </div>
             
             <div class="contact-section">
-                <h3>📧 How to Submit a DMCA Notice</h3>
+                <h3>How to Submit a DMCA Notice</h3>
                 <p>Send an email to our support address with the following information:</p>
                 <ul style="margin: 0.5rem 0 1rem 1.5rem; color: var(--text-secondary);">
                     <li>Your name and contact information</li>
@@ -3410,7 +4760,7 @@ function openContactModal(type = 'support') {
             </div>
             
             <div class="contact-section">
-                <h3>📝 Email Subject Line</h3>
+                <h3>Email Subject Line</h3>
                 <p>Use this subject: <strong>"DMCA Takedown Notice - [Game Name]"</strong></p>
             </div>
             
@@ -3421,11 +4771,11 @@ function openContactModal(type = 'support') {
         `;
     } else {
         // General support
-        title.textContent = '📧 Contact Us';
+        title.textContent = 'Contact Us';
         subtitle.textContent = 'Choose how you\'d like to reach us';
         content = `
             <div class="contact-section">
-                <h3>💬 Recommended: Support Center</h3>
+                <h3>Recommended: Support Center</h3>
                 <p>For the fastest response, use our built-in Support Center. You can chat with admins and track your requests.</p>
                 <button class="contact-btn-action" onclick="closeContactModal(); setTimeout(() => openSupportPanel(), 300);">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
@@ -3434,7 +4784,7 @@ function openContactModal(type = 'support') {
             </div>
             
             <div class="contact-section">
-                <h3>📧 Email Contact</h3>
+                <h3>Email Contact</h3>
                 <p>For formal inquiries, partnerships, or detailed issues, you can email us directly:</p>
                 
                 <div class="contact-option">
@@ -3497,3 +4847,5 @@ function copyContactEmail(inputId) {
 window.openContactModal = openContactModal;
 window.closeContactModal = closeContactModal;
 window.copyContactEmail = copyContactEmail;
+
+
